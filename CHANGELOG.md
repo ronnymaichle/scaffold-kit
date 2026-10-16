@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.2 (2026-10-16)
+
+- The scaffold-kit-maintainer skill's source moved from `.claude/skills/scaffold-kit-maintainer/` to `skill/scaffold-kit-maintainer/`, next to the scaffold-project source. The repository no longer has a `.claude/skills/` folder, so Claude Code loads only the copy saved in claude.ai; the root `CLAUDE.md` names the source file to read when that copy is not available.
+- Projects: nothing to adopt; no rules, templates or scripts changed.
+
 ## 2.1.1 (2026-10-16)
 
 - The scaffold-kit-maintainer skill and the README no longer describe a second copy of the scaffold-project skill in `~/.claude/skills/`. The copy saved in claude.ai syncs to Claude Code automatically, so step 8 publishes a changed skill only there.
