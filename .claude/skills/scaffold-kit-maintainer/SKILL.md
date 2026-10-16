@@ -8,7 +8,7 @@ description: "Change the scaffold-project skill or its scaffold-kit repository (
 ## How the pieces fit
 
 - **The kit**, `https://github.com/ronnymaichle/scaffold-kit`: the full rules (`references/`), templates (`templates/`), check scripts (`scripts/quality/`) and their tests (`tests/`). Each release is an annotated tag `vMAJOR.MINOR.PATCH`.
-- **The scaffold-project skill**: the short process (inputs, profiles, checkpoints, upgrade mode). Its source is `skill/scaffold-project/SKILL.md` in the kit. The copy Claude actually uses is saved in the user's claude.ai account, and optionally in `~/.claude/skills/scaffold-project/` for Claude Code on this computer. At scaffold time it fetches the newest `v2.*` tag, so kit releases reach new projects without touching the skill.
+- **The scaffold-project skill**: the short process (inputs, profiles, checkpoints, upgrade mode). Its source is `skill/scaffold-project/SKILL.md` in the kit. The copy Claude actually uses is saved in the user's claude.ai account, which syncs it to Claude Code automatically; there is no separate local copy to keep in step. At scaffold time it fetches the newest `v2.*` tag, so kit releases reach new projects without touching the skill.
 - **This skill**: its source is `.claude/skills/scaffold-kit-maintainer/SKILL.md` in the kit, which Claude Code loads when it works in the repository. A copy may also be saved in the claude.ai account.
 - **Existing projects** keep their own copies of the docs and scripts and record their kit version in their root `CLAUDE.md`. A kit change never edits them; they adopt it through the skill's upgrade mode.
 
@@ -49,8 +49,7 @@ Rules that keep the kit coherent:
 7. **Release:** commit, push the branch and open a PR with a Conventional Commit title (`gh pr create`). After the user approves, squash-merge it (`gh pr merge --squash --delete-branch`), update `main` (`git switch main && git pull --ff-only`), tag the merge commit (`git tag -a vX.Y.Z -m "scaffold-kit X.Y.Z"`), push the tag (`git push origin vX.Y.Z`) and confirm it with `git ls-remote --tags origin`. If `git push` asks for credentials, offer `gh auth setup-git`; it changes the global git config, so ask first. Never put a token in a remote URL.
 8. **Publish the skills**, only when a skill file changed:
    - claude.ai: the user opens a chat on claude.ai, attaches the changed `SKILL.md` and asks Claude to update their skill of that name from it, then saves the card Claude shows.
-   - Claude Code on this computer, with the user's OK: `mkdir -p ~/.claude/skills && cp -R skill/scaffold-project ~/.claude/skills/`.
-   Changes to the kit alone need nothing here: the skill picks up the new tag on its own.
+   The claude.ai copy syncs to Claude Code automatically, so nothing is copied into `~/.claude/skills/`. Changes to the kit alone need nothing here: the skill picks up the new tag on its own.
 9. **Report:** what changed, the new version, whether a saved skill needs updating, and what existing projects gain by running upgrade mode.
 
 ## Trying a process change

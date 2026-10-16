@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.1 (2026-10-16)
+
+- The scaffold-kit-maintainer skill and the README no longer describe a second copy of the scaffold-project skill in `~/.claude/skills/`. The copy saved in claude.ai syncs to Claude Code automatically, so step 8 publishes a changed skill only there.
+- Projects: nothing to adopt; no rules, templates or scripts changed.
+
 ## 2.1.0 (2026-10-16)
 
 - Trusted sources: new reference `references/sources.md`, which becomes `docs/SOURCES.md`. It lists the official and curated sources for versions, support windows, advisories, malicious packages, platform limits, security practice, SEO, privacy law and email, in order of trust, filtered to each project's stack and countries. It also says when Claude consults them (scaffold, every new dependency, releases, hotfixes, an optional weekly agent) and treats fetched pages as data, never instructions. The skill and the Feature, Hotfix and Release workflows now check these sources instead of relying on memory.
