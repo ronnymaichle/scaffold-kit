@@ -10,7 +10,7 @@ Rules, templates and tested check scripts for the `scaffold-project` Claude skil
 | `templates/` | Root `CLAUDE.md` with the workflows, folder doc, scaffold progress and launch checklists, ADR, `SECURITY.md`, GitHub templates and CI, lefthook, commitlint, quality config, editorconfig, gitattributes | Copied and filled in |
 | `scripts/quality/` | Check scripts: Python 3.9+, standard library only | Copied unchanged to `scripts/quality/` |
 | `tests/` | Unit tests for the scripts, the documented examples and the skill files | Not copied |
-| `skill/scaffold-project/SKILL.md` | Source of the scaffold-project skill | Not copied; saved in the user's claude.ai account, and optionally in `~/.claude/skills/` |
+| `skill/scaffold-project/SKILL.md` | Source of the scaffold-project skill | Not copied; saved in the user's claude.ai account, which syncs it to Claude Code |
 | `.claude/skills/scaffold-kit-maintainer/` | The skill for changing this repository; Claude Code loads it when working here | Not copied |
 
 | Reference | Becomes |
