@@ -1,8 +1,8 @@
 # Git hooks (lefthook). Install once per clone with `lefthook install`, or from
 # the package manager's prepare/postinstall script.
 # ADAPT the format and lint jobs to the stack (bunx / npx / pnpm exec / uv run).
-# Keep the secret, folder-docs, debug and design jobs; drop design-literals only
-# if the project has no UI. Check each command against the installed tool's --help.
+# Keep the secret, folder-docs, debug, design and trusted-sources jobs; drop
+# design-literals only if the project has no UI. Check each command against the installed tool's --help.
 # Hooks are never skipped with --no-verify (CONTRIBUTING.md).
 
 pre-commit:
@@ -27,6 +27,9 @@ pre-commit:
 
     - name: design-literals
       run: python3 scripts/quality/design_tokens.py literals --staged
+
+    - name: trusted-sources
+      run: python3 scripts/quality/sources.py check
 
 commit-msg:
   jobs:

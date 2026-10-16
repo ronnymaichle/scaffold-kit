@@ -25,6 +25,7 @@ Rules, templates and tested check scripts for the `scaffold-project` Claude skil
 | `public-web.md` | `docs/SEO.md`, `docs/ANALYTICS.md` |
 | `logging.md` | `docs/LOGGING.md` |
 | `testing.md` | `docs/TESTING.md` |
+| `sources.md` | `docs/SOURCES.md` |
 | `upgrade.md` | Nothing; the procedure for existing repositories |
 
 ## Scripts
@@ -42,8 +43,11 @@ Run from the project root (or pass `--root <project>`). Each exits non-zero on p
 | `python3 scripts/quality/design_tokens.py contrast [--json]` | WCAG AA contrast for every token pair, light and dark |
 | `python3 scripts/quality/palette.py theme --primary HEX [--highlight HEX] --out FILE` | Generate a full light and dark theme from a brand color |
 | `python3 scripts/quality/palette.py preview A.css B.css --out FILE` | Compare theme proposals on one HTML page |
+| `python3 scripts/quality/sources.py check` | Claude Code's WebFetch allow rules match the https links in `docs/SOURCES.md`, with no wildcards and no hosts where anyone can publish; warns when the list's review date is old |
+| `python3 scripts/quality/sources.py sync` | Rewrite the WebFetch allow rules in `.claude/settings.json` from `docs/SOURCES.md`, keeping every other setting |
+| `python3 scripts/quality/sources.py domains` | Print the pre-approved domains |
 
-Configuration lives in `quality.config.json` at the project root (template in `templates/`). The defaults are in `scripts/quality/common.py`: the exclude lists and `design.contrastPairs` extend the defaults, every other key replaces its default.
+Configuration lives in `quality.config.json` at the project root (template in `templates/`). The defaults are in `scripts/quality/common.py`: the exclude lists, `sources.neverPreapprove` and `design.contrastPairs` extend the defaults, every other key replaces its default.
 
 ## Versions
 

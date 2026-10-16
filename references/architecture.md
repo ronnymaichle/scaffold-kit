@@ -26,7 +26,7 @@ Verify current versions and maintenance status with a web search before recommen
 - Plain functions and modules over classes, unless the framework is class-based.
 - No speculative abstractions (YAGNI): no generic base classes, no repositories for a single use, no microservices, Kubernetes or distributed caches before a measured need.
 - Errors are explicit and typed (`docs/LOGGING.md`). Never swallow them.
-- Every new dependency is justified: what it replaces, maintenance status, adoption, known vulnerabilities. Prefer the standard library or framework built-ins.
+- Every new dependency is justified: what it replaces, maintenance status, adoption, known vulnerabilities and malicious-package reports, checked in the trusted sources (`docs/SOURCES.md`). Prefer the standard library or framework built-ins.
 
 ## Request flow
 

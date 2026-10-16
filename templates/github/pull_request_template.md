@@ -8,7 +8,7 @@
 
 ## Security and privacy
 
-<!-- Inputs, access rules, personal data touched; threat-model risks and how they are handled. "None" if nothing applies. -->
+<!-- Inputs, access rules, personal data touched; threat-model risks and how they are handled; trusted sources checked, with dates (docs/SOURCES.md). "None" if nothing applies. -->
 
 ## Scalability
 
@@ -37,5 +37,6 @@
 - [ ] New error codes and analytics events are in their catalogs
 - [ ] Every user action has feedback (toast, inline error, banner or dialog)
 - [ ] No temporary debug lines, no secrets
+- [ ] New dependencies checked in the trusted sources: advisories, malicious-package reports, health and the exact name
 - [ ] Design checks pass in both themes
 - [ ] Affected docs updated (database, privacy, threat model, SEO, operations)

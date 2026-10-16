@@ -33,7 +33,7 @@ class KitFileTests(unittest.TestCase):
             "docs/ARCHITECTURE.md", "docs/DATABASE.md", "docs/security/THREAT-MODEL.md",
             "docs/security/findings.md", "docs/PRIVACY.md", "docs/DEPLOYMENT.md", "docs/SCALING.md",
             "docs/OPERATIONS.md", "docs/DESIGN.md", "docs/SEO.md", "docs/ANALYTICS.md",
-            "docs/LOGGING.md", "docs/TESTING.md", "docs/CODEMAP.md", "docs/LAUNCH-CHECKLIST.md",
+            "docs/LOGGING.md", "docs/TESTING.md", "docs/SOURCES.md", "docs/CODEMAP.md", "docs/LAUNCH-CHECKLIST.md",
             "docs/SCAFFOLD-PROGRESS.md", "docs/UPGRADE-PLAN.md",
         }
         files = list((KIT / "references").glob("*.md")) + list((KIT / "templates").rglob("*.md"))
@@ -53,7 +53,7 @@ class KitFileTests(unittest.TestCase):
 
     def test_hook_template_runs_every_quality_script(self):
         text = (KIT / "templates" / "lefthook.yml").read_text(encoding="utf-8")
-        for command in ("folder_docs.py staged", "debug_leftovers.py --staged", "design_tokens.py literals --staged"):
+        for command in ("folder_docs.py staged", "debug_leftovers.py --staged", "design_tokens.py literals --staged", "sources.py check"):
             self.assertIn(command, text)
 
 

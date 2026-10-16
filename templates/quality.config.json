@@ -11,5 +11,11 @@
   },
   "debug": {
     "exclude": []
+  },
+  "sources": {
+    "file": "docs/SOURCES.md",
+    "settingsFile": ".claude/settings.json",
+    "neverPreapprove": [],
+    "reviewDays": 180
   }
 }
