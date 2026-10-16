@@ -1,6 +1,6 @@
 # scaffold-kit
 
-Rules, templates and tested check scripts for the `scaffold-project` Claude skill. The skill downloads a tagged release of this repository when it scaffolds or upgrades a project. Projects keep their own copies of what they use, so they never depend on this repository afterwards.
+Rules, templates and tested check scripts for the `scaffold-project` Claude skill, plus the skill's own source. The skill downloads a tagged release of this repository when it scaffolds or upgrades a project. Projects keep their own copies of what they use, so they never depend on this repository afterwards.
 
 ## Layout
 
@@ -9,7 +9,9 @@ Rules, templates and tested check scripts for the `scaffold-project` Claude skil
 | `references/` | The full rules, one file per area | Project docs; the first lines of each file name the docs it becomes |
 | `templates/` | Root `CLAUDE.md` with the workflows, folder doc, scaffold progress and launch checklists, ADR, `SECURITY.md`, GitHub templates and CI, lefthook, commitlint, quality config, editorconfig, gitattributes | Copied and filled in |
 | `scripts/quality/` | Check scripts: Python 3.9+, standard library only | Copied unchanged to `scripts/quality/` |
-| `tests/` | Unit tests for the scripts and the documented examples | Not copied |
+| `tests/` | Unit tests for the scripts, the documented examples and the skill files | Not copied |
+| `skill/scaffold-project/SKILL.md` | Source of the scaffold-project skill | Not copied; saved in the user's claude.ai account, and optionally in `~/.claude/skills/` |
+| `.claude/skills/scaffold-kit-maintainer/` | The skill for changing this repository; Claude Code loads it when working here | Not copied |
 
 | Reference | Becomes |
 |---|---|
@@ -47,12 +49,12 @@ Configuration lives in `quality.config.json` at the project root (template in `t
 
 Releases are tagged `vMAJOR.MINOR.PATCH`, and the skill uses the newest `v2.*` tag. A breaking change to the layout or to a script's interface is a new major version and needs a skill update. Projects record the kit version in their root `CLAUDE.md`; upgrade mode (`references/upgrade.md`) moves them to a newer one. Changes are listed in `CHANGELOG.md`.
 
-To release: update `VERSION` and `KIT_VERSION` in `scripts/quality/common.py` (a test keeps them equal), add a `CHANGELOG.md` entry, and tag the commit.
+Every change and release follows the scaffold-kit-maintainer skill in `.claude/skills/`: which file a change belongs in, tests, version bumps, tagging, and publishing a changed skill.
 
 ## Development
 
 ```bash
-python3 -m unittest discover -s tests -v
+python3 -B -m unittest discover -s tests -v
 ```
 
 CI runs the tests on Python 3.9 and 3.13.

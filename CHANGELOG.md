@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.1 (2026-10-16)
+
+- The scaffold-project skill's source now lives in the kit (`skill/scaffold-project/SKILL.md`), so it is versioned and edited together with the rules it uses.
+- New scaffold-kit-maintainer skill (`.claude/skills/scaffold-kit-maintainer/`) and a root `CLAUDE.md`: which file each kind of change belongs in, testing, version bumps, releases and publishing a changed skill.
+- New tests keep both skills valid and in sync with the kit: frontmatter, the major version the skill fetches, the skill's size, and the reference mapping tables.
+- Projects: nothing to adopt; no rules, templates or scripts changed.
+
 ## 2.0.0 (2026-10-13)
 
 First release of the kit. Version 1 of the `scaffold-project` skill was a single file; version 2 is a short skill plus this kit.
