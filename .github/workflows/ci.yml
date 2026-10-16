@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.9 is the oldest supported version (the python3 that ships with macOS).
+        python: ["3.9", "3.13"]
+    container: python:${{ matrix.python }}-slim
+    steps:
+      - name: Install git (the staged-mode tests need it)
+        run: apt-get update && apt-get install -y --no-install-recommends git
+      - uses: actions/checkout@v6
+      - run: python -m unittest discover -s tests -v

@@ -1,0 +1,34 @@
+# Git hooks (lefthook). Install once per clone with `lefthook install`, or from
+# the package manager's prepare/postinstall script.
+# ADAPT the format and lint jobs to the stack (bunx / npx / pnpm exec / uv run).
+# Keep the secret, folder-docs, debug and design jobs; drop design-literals only
+# if the project has no UI. Check each command against the installed tool's --help.
+# Hooks are never skipped with --no-verify (CONTRIBUTING.md).
+
+pre-commit:
+  jobs:
+    - name: format
+      run: bunx prettier --write {staged_files} # ADAPT
+      glob: "*.{ts,js,svelte,css,json,md,yml,yaml}"
+      stage_fixed: true
+
+    - name: lint
+      run: bunx eslint --max-warnings=0 {staged_files} # ADAPT
+      glob: "*.{ts,js,svelte}"
+
+    - name: secrets
+      run: gitleaks git --pre-commit --staged --redact --verbose
+
+    - name: folder-docs
+      run: python3 scripts/quality/folder_docs.py staged
+
+    - name: debug-leftovers
+      run: python3 scripts/quality/debug_leftovers.py --staged
+
+    - name: design-literals
+      run: python3 scripts/quality/design_tokens.py literals --staged
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: bunx commitlint --edit {1} # ADAPT

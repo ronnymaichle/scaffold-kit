@@ -1,0 +1,37 @@
+# Upgrade mode
+
+For an existing repository: applying these standards to a project that was not scaffolded with the kit, moving a scaffolded project to a newer kit version, or moving a project up a profile. Only the approved plan (`docs/UPGRADE-PLAN.md`) is written from this file; every other change arrives through the Feature workflow.
+
+## Rules
+
+- Read-only until the user approves a plan: no edits, installs, migrations, deploys, commits or pushes during the inventory. If the working tree has uncommitted changes, say so and leave them alone.
+- Never overwrite or regenerate existing files, rewrite history, or switch the stack, framework, database, ORM or styling approach as part of an upgrade. Each of those is a separate decision with its own ADR, made only when the user asks.
+- Conventions that already work stay. Record each one in an ADR ("kept from the existing codebase") instead of replacing it.
+- Changes arrive as small PRs through the Feature workflow, ordered by risk, each green before the next starts.
+
+## Steps
+
+1. Inventory, read-only: stack and versions, folder structure, package scripts, how tests run and what they cover, CI, git hooks, existing docs (`README.md`, `CLAUDE.md` files, `docs/`), dependencies, database and migrations, auth, input validation, logging and error handling, theming, SEO, analytics and consent, deployment, and the recorded kit version if any.
+2. Run the checks without installing anything into the project, from the kit folder: `python3 <kit>/scripts/quality/folder_docs.py --root <project> check`, `python3 <kit>/scripts/quality/debug_leftovers.py --root <project>` and, if a theme file exists, `design_tokens.py --root <project> literals` and `contrast`. Run gitleaks over the full history and the dependency audit when they are installed; otherwise list them as missing. Do not start services or run the test suite if it needs a database or network access; ask first.
+3. Review the code against the security defaults in the kit's `references/security.md`, with extra attention to injection (string-built SQL or shell commands), raw HTML rendering of user content (`{@html}`, `dangerouslySetInnerHTML`, `v-html`), missing authorization checks, committed secrets and `.env` files, and secrets reachable from client code.
+4. Report critical and high findings at once, before anything else, each with file and line, impact and the fix. An exposed secret is rotated first and removed from the repository second; history is rewritten only with the user's explicit approval, because it changes every clone.
+5. Gap report: for each area (security, tests, workflow, docs, logging and errors, design, SEO, analytics and consent, hosting and scaling), what exists, what is missing for the chosen profile, its severity, and the PR that closes it. Ask which profile applies if it is not obvious.
+6. After approval, the first PR saves the plan as `docs/UPGRADE-PLAN.md`; later PRs tick it off. Recommended order:
+   1. Critical and high security fixes, each with a regression test.
+   2. A safety net: the root `CLAUDE.md` (merged with any existing one, never replacing what it says), `CONTRIBUTING.md`, `quality.config.json`, the vendored `scripts/quality/`, hooks and CI that run what already passes, and tests around the code the next PRs touch.
+   3. Repository workflow: branch protection, commit and PR conventions, PR and issue templates.
+   4. Medium security findings and the remaining defaults (headers, validation, rate limits, environment validation).
+   5. Logging, the error catalog and global error handling.
+   6. Folder docs, adopted folder by folder with `folderDocs.include`, starting where work happens.
+   7. Design tokens and the feedback system; SEO; analytics and consent; hosting, backups and scaling items; the launch checklist items that apply.
+7. Record the kit version in the root `CLAUDE.md` when the safety-net PR merges.
+
+## Moving to a newer kit version
+
+- Compare the kit version recorded in the root `CLAUDE.md` with the new one and read the kit's `CHANGELOG.md` between them.
+- Replace `scripts/quality/` with the new version (the folder is never edited in projects, so replacing it is safe) and run `check`; merge new configuration defaults into `quality.config.json` by hand.
+- Propose rule and template changes as PRs against the project's docs, keeping project-specific decisions.
+
+## Moving up a profile
+
+The gap report lists what the new profile adds: the items the lean profile skipped, or the strict additions in each reference file. The PR order stays the same.

@@ -1,0 +1,101 @@
+# Backend: data, auth, APIs and caching
+
+Becomes `docs/DATABASE.md` (data store, modeling, types, ORM, local and test databases) and the Auth, APIs and Caching sections of `docs/ARCHITECTURE.md`. Keep what applies, replace scaffold-time tables with the decision and its reason, drop the rest.
+
+## Choosing the data store (scaffold-time)
+
+Recommend from the app's data shape and needs, preferring open-source or self-hostable options and services with a usable free tier. For every hosted service, state after checking with a web search: the free-tier limits, what happens when they are exceeded (pausing, throttling, billing), the lock-in, and the exit path (export, self-hosting). Record the choice in an ADR.
+
+| Data shape or need | Default | Alternatives and caveats |
+|---|---|---|
+| Relational data with constraints, reporting, geo or full-text search (most web apps) | PostgreSQL, self-hosted in Compose or managed (Supabase, Neon, the host's managed Postgres); PostGIS for geo | SQLite or libSQL (Turso) for small single-node apps |
+| Database, auth, storage and realtime managed together with low lock-in | Supabase (open-source Postgres, self-hostable later) | Free-tier limits and pausing rules apply |
+| Mobile-first apps with offline sync and realtime documents | Firebase (Firestore, Auth, Functions) | Proprietary; limited queries (including geo); costs grow per read and write |
+| Document-shaped data with highly variable fields and few relations | MongoDB (Atlas or self-hosted) | Postgres JSONB covers many of these cases |
+
+Offline-first apps need an explicit sync design whatever the store: local storage on the device, a queue of pending writes (including media uploads), conflict rules (last write wins, per-field merge or manual resolution) and a visible sync state for the user. Firestore offline persistence, PowerSync or ElectricSQL on Postgres, and CouchDB/PouchDB replication are common options; compare them for the case at hand.
+
+## Auth
+
+### Choosing the approach (scaffold-time), in order of default preference
+
+1. A maintained auth library inside the app, with users in the app's own database (Better Auth or Auth.js for TypeScript, the framework's built-in auth for Django or Rails, FastAPI-Users): free, no lock-in, full control.
+2. The platform's auth (Supabase Auth, Firebase Auth) when that platform is already the data store.
+3. A hosted identity provider (Clerk, Auth0) or a self-hosted identity server (Keycloak, Zitadel, Authentik) for enterprise SSO, one login across several apps, or compliance needs.
+
+### Rules for every approach
+
+- Email verification; password reset with single-use, expiring tokens; rate limiting with backoff on login, signup and reset.
+- Passwords hashed with argon2id or bcrypt through the library; never hand-rolled crypto.
+- Optional MFA (TOTP) and passkeys; MFA required for admin and staff accounts in the strict profile.
+- Social login through OAuth or OIDC with state and PKCE.
+- Sessions rotate on login and privilege change and are revoked on the server at logout and password change.
+- Roles and permissions live in the database and are checked in services, never only in the UI.
+
+### Sessions by approach
+
+- In-app library: server-side sessions stored in the database (or the library's adapter), referenced by an httpOnly, Secure, SameSite=Lax cookie, so they work across instances.
+- Platform auth: use the platform's server-side helpers so tokens travel in httpOnly cookies (for example Supabase's SSR package, or Firebase session cookies minted with the Admin SDK); verify the token on the server for every request; keep access tokens short-lived with refresh; never trust claims read in the browser for authorization.
+- Hosted identity provider: OIDC authorization code flow with PKCE; the app then keeps its own session as above.
+
+### Platform security
+
+- Supabase: Row Level Security on every table with tested policies; the service-role key only on the server.
+- Firebase: default-deny security rules tested in the Emulator Suite; the Admin SDK only on the server.
+- MongoDB: validate input types to block operator injection (`$ne`, `$where` and similar); restrict network access, never open to all addresses.
+
+## Data modeling conventions
+
+- The schema is defined in code (the ORM schema) and changes only through generated, reviewed migrations. Applied migrations are never edited; breaking changes use expand, migrate, contract (`docs/SCALING.md`).
+- Naming: snake_case tables and columns, one convention for plural or singular table names, `<entity>_id` foreign keys.
+- Keys: UUIDv7 (time-ordered) or bigint identity primary keys; no guessable sequential ids in URLs where enumeration matters.
+- Every table has `created_at` and `updated_at` (timestamptz, UTC). Soft delete (`deleted_at`) where undo, restore or audit is needed, with partial indexes that exclude deleted rows; hard delete for personal-data erasure.
+- Integrity lives in the database: NOT NULL by default, CHECK and UNIQUE constraints, foreign keys with a deliberate ON DELETE behaviour. The database is the last line of defense.
+- Normalize by default (3NF); denormalize only for a measured read need. JSONB only for genuinely flexible attributes, never for core relations.
+- Indexes on every foreign key and on every query's filter and sort columns; GiST for geo; EXPLAIN on realistic data for hot queries.
+- Money as integer minor units or numeric; enums as CHECK constraints or lookup tables; geo as PostGIS geography (SRID 4326).
+- Multi-tenant apps: `tenant_id` on every tenant-owned row, enforced in repositories and with Row Level Security where available.
+- Document databases: model around access patterns, decide embed or reference per relationship, validate documents with a schema, index every query.
+- `docs/DATABASE.md` holds these conventions, a generated ERD (Mermaid) and per-table notes on personal data and retention.
+
+## One source of truth for types (database -> server -> UI)
+
+- Types flow from the schema: the ORM infers row types, input validation schemas are derived from or aligned with them (drizzle-valibot, drizzle-zod), and the framework's generated route types (SvelteKit `./$types`) carry them to components. Strict type checking (`tsc`, plus `svelte-check` in SvelteKit) runs in `check`, so a mismatch between database, server and UI fails the build. Svelte components use TypeScript like any other code (`<script lang="ts">`).
+- Raw database rows never reach the client: repositories or services map them to explicit DTO types (for example `toMarkerDTO`) that list only safe fields, so password hashes and internal flags cannot leak.
+- A schema-drift check (generating a migration yields no changes) runs in `check`.
+- Other languages: Python uses SQLAlchemy models with Pydantic schemas and strict mypy or pyright; Go uses sqlc-generated code; a separate frontend gets a typed client generated from OpenAPI.
+
+## ORM and query layer (scaffold-time)
+
+Verify current versions and support for special types such as PostGIS with a web search.
+
+| Situation | Recommendation |
+|---|---|
+| TypeScript with SQL; SQL-like control, lightweight, Bun-friendly | Drizzle ORM with drizzle-kit migrations |
+| TypeScript; a higher-level API and tooling preferred | Prisma (raw SQL may be needed for types such as geo) |
+| TypeScript; complex dynamic SQL without an ORM | Kysely (type-safe query builder) |
+| Python | SQLAlchemy 2 with Alembic (SQLModel for simple FastAPI apps) |
+| Go | sqlc with goose or Atlas migrations |
+| MongoDB | The official driver with schema validation, or Mongoose |
+| Supabase or Firebase | A server-side ORM or SDK with generated types; client SDKs only with RLS or security rules in place |
+
+## Local and test databases
+
+- Development: the database runs in docker-compose with the same major version and extensions as production (for example Postgres with PostGIS). `db:reset` recreates it, `migrate` applies migrations, `db:seed` loads realistic fake data (for example Faker). Platforms use their local stacks (Supabase CLI, Firebase Emulator Suite).
+- Tests: a separate test database, never the development one. Integration tests are isolated (a transaction rolled back per test, or a fresh database per worker with Testcontainers) and build data with factories rather than shared fixtures; e2e runs against a freshly migrated and seeded database (`docs/TESTING.md`).
+- Production data never goes to development or test machines; when realistic data is needed, use an anonymized dump.
+
+## APIs
+
+- Inside a full-stack framework, prefer its own data loading and form actions; add JSON endpoints only for client-fetched data.
+- JSON endpoints share one error shape (`{ code, message, ref }` from the error catalog), cursor-based pagination with a maximum page size, idempotency keys on create and payment endpoints, rate limits and schema validation.
+- A public or mobile API gets a version prefix (`/api/v1`) and an OpenAPI description generated from the validation schemas.
+
+## Caching
+
+Add layers only when measurements show the need.
+
+1. Database first: correct indexes and query shape.
+2. HTTP caching: hashed static assets cached for a year; public pages with a short `s-maxage` and `stale-while-revalidate`; every authenticated or personalized response marked `Cache-Control: private, no-store`, so a CDN or proxy never serves one user's data to another.
+3. Application cache: an in-process LRU only for small, rarely changing, per-instance data; a shared Redis or Valkey cache behind the cache module (`docs/SCALING.md`) for anything shared across instances.
+4. Every cache entry has an owner, a TTL and an invalidation rule written next to the code that changes the data.

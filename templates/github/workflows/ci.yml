@@ -1,0 +1,114 @@
+# CI for every pull request and every push to main (CONTRIBUTING.md).
+# Written for Bun with PostgreSQL. ADAPT the lines marked ADAPT to the stack
+# (npm ci / pnpm install --frozen-lockfile / uv sync --locked, and the runner
+# commands), keep the job structure and the security steps, and update each
+# action to its current major version (strict profile: pin commit SHAs).
+name: CI
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-title:
+    name: PR title lint
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2 # ADAPT
+      - run: bun install --frozen-lockfile # ADAPT
+      # The title becomes the squash commit on main. It is untrusted input, so it
+      # is passed through an environment variable, never interpolated into the script.
+      - name: Check the title with commitlint
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$TITLE" | bunx commitlint # ADAPT
+
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    services:
+      postgres: # ADAPT: the database, version and extensions used in production
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app" --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_URL: postgres://app:app@localhost:5432/app_test # ADAPT
+      LOG_LEVEL: warn
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2 # ADAPT
+      - run: bun install --frozen-lockfile # ADAPT
+      - run: bun run migrate # ADAPT
+      - run: bun run check # ADAPT
+
+  check-security:
+    name: check:security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # the secret scan covers the full history
+      - name: Secrets (gitleaks, full history)
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.28.0 git /repo --redact --verbose
+      - name: Static analysis (Semgrep)
+        run: docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep semgrep scan --config p/default --error --metrics=off
+      - uses: oven-sh/setup-bun@v2 # ADAPT
+      - run: bun install --frozen-lockfile # ADAPT
+      - name: Dependency vulnerabilities
+        run: bun audit # ADAPT: npm audit --audit-level=high / pip-audit / govulncheck ./...
+
+  e2e:
+    name: test:e2e
+    runs-on: ubuntu-latest
+    services:
+      postgres: # ADAPT
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app" --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_URL: postgres://app:app@localhost:5432/app_e2e # ADAPT
+      LOG_LEVEL: warn
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2 # ADAPT
+      - run: bun install --frozen-lockfile # ADAPT
+      - run: bunx playwright install --with-deps chromium # ADAPT
+      - run: bun run migrate && bun run db:seed # ADAPT
+      - run: bun run test:e2e # ADAPT
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+
+  image:
+    name: image build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build the image
+        run: docker build --build-arg GIT_COMMIT=${{ github.sha }} -t app:${{ github.sha }} .
+      # Phase 2: scan the image (Trivy) and the Dockerfile (hadolint) here; on main,
+      # push the image tagged with the commit SHA so staging and production run it.

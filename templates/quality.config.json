@@ -1,0 +1,15 @@
+{
+  "folderDocs": {
+    "exclude": [],
+    "include": [],
+    "codemapFile": "docs/CODEMAP.md"
+  },
+  "design": {
+    "themeFiles": ["src/app.css"],
+    "allowLiteralsIn": [],
+    "contrastPairs": []
+  },
+  "debug": {
+    "exclude": []
+  }
+}
