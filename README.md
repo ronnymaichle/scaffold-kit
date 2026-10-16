@@ -11,7 +11,7 @@ Rules, templates and tested check scripts for the `scaffold-project` Claude skil
 | `scripts/quality/` | Check scripts: Python 3.9+, standard library only | Copied unchanged to `scripts/quality/` |
 | `tests/` | Unit tests for the scripts, the documented examples and the skill files | Not copied |
 | `skill/scaffold-project/SKILL.md` | Source of the scaffold-project skill | Not copied; saved in the user's claude.ai account, which syncs it to Claude Code |
-| `.claude/skills/scaffold-kit-maintainer/` | The skill for changing this repository; Claude Code loads it when working here | Not copied |
+| `skill/scaffold-kit-maintainer/SKILL.md` | Source of the scaffold-kit-maintainer skill, for changing this repository | Not copied; saved in the user's claude.ai account, which syncs it to Claude Code |
 
 | Reference | Becomes |
 |---|---|
@@ -53,7 +53,7 @@ Configuration lives in `quality.config.json` at the project root (template in `t
 
 Releases are tagged `vMAJOR.MINOR.PATCH`, and the skill uses the newest `v2.*` tag. A breaking change to the layout or to a script's interface is a new major version and needs a skill update. Projects record the kit version in their root `CLAUDE.md`; upgrade mode (`references/upgrade.md`) moves them to a newer one. Changes are listed in `CHANGELOG.md`.
 
-Every change and release follows the scaffold-kit-maintainer skill in `.claude/skills/`: which file a change belongs in, tests, version bumps, tagging, and publishing a changed skill.
+Every change and release follows the scaffold-kit-maintainer skill (`skill/scaffold-kit-maintainer/SKILL.md`): which file a change belongs in, tests, version bumps, tagging, and publishing a changed skill.
 
 ## Development
 

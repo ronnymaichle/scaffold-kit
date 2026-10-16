@@ -6,7 +6,7 @@ from helpers import KIT
 
 SKILLS = {
     "scaffold-project": KIT / "skill" / "scaffold-project" / "SKILL.md",
-    "scaffold-kit-maintainer": KIT / ".claude" / "skills" / "scaffold-kit-maintainer" / "SKILL.md",
+    "scaffold-kit-maintainer": KIT / "skill" / "scaffold-kit-maintainer" / "SKILL.md",
 }
 
 
