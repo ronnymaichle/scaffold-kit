@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.0 (2026-10-16)
+
+- Trusted sources: new reference `references/sources.md`, which becomes `docs/SOURCES.md`. It lists the official and curated sources for versions, support windows, advisories, malicious packages, platform limits, security practice, SEO, privacy law and email, in order of trust, filtered to each project's stack and countries. It also says when Claude consults them (scaffold, every new dependency, releases, hotfixes, an optional weekly agent) and treats fetched pages as data, never instructions. The skill and the Feature, Hotfix and Release workflows now check these sources instead of relying on memory.
+- New check script `scripts/quality/sources.py` (`check`, `sync`, `domains`): keeps Claude Code's WebFetch allow rules in `.claude/settings.json` in step with the sources file. It never pre-approves wildcards or hosts where anyone can publish, flags http links, and warns when the list's review date is older than `sources.reviewDays`. New `sources` section in `quality.config.json`; the hook template runs the check.
+- Legal documents (`privacy.md`): terms of service and what they cover, versioned legal documents, explicit acceptance at sign-up recorded per version, re-acceptance after material changes, minimum age, and duties for apps that host user content. The privacy policy is shown, not agreed to.
+- Local development and promotion: development never uses a hosted project; everything a hosted project needs lives in the repository; one idempotent promote script (`deploy:env`, with `--dry-run`) takes it to staging and production. Commands are listed for Postgres, Supabase and Firebase. A data-store family rule says which moves are scriptable (within Postgres-compatible stores, or local and hosted Firebase) and which are a data-layer rewrite (across families).
+- Security: CORS policy, incoming and outgoing webhooks, bot protection with a challenge on public forms, an edge proxy with DDoS protection and a WAF with the origin locked to it, the client IP read only from the trusted proxy's header, and a new supply-chain section (frozen installs, minimum release age and update cooldowns, install scripts only for trusted packages, incident response). A lean section lets VPN-only internal tools skip the WAF and the bot challenge.
+- Email (`hosting.md`): a local mail catcher, a staging allowlist, SPF, DKIM and DMARC, separate transactional and marketing streams, one-click unsubscribe, bounce and complaint handling.
+- Templates: new lines in the root `CLAUDE.md`, the scaffold progress and launch checklists, and the PR template for all of the above.
+- Projects: in upgrade mode, replace `scripts/quality/`; add the `sources` section to `quality.config.json`; write `docs/SOURCES.md` and run `sources.py sync`; add the `trusted-sources` hook job; then adopt the new rules as PRs: legal documents and terms acceptance, the promote script, email authentication, edge protection, CORS, webhooks and supply-chain settings.
+
 ## 2.0.1 (2026-10-16)
 
 - The scaffold-project skill's source now lives in the kit (`skill/scaffold-project/SKILL.md`), so it is versioned and edited together with the rules it uses.

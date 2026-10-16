@@ -27,7 +27,7 @@ __all__ = [
     "report",
 ]
 
-KIT_VERSION = "2.0.1"
+KIT_VERSION = "2.1.0"
 
 _DEFAULTS = {
     "folderDocs": {
@@ -80,6 +80,27 @@ _DEFAULTS = {
     "debug": {
         "exclude": ["node_modules", "/build", "/dist", "/coverage"],
     },
+    "sources": {
+        "file": "docs/SOURCES.md",
+        # Claude Code project settings that receive the WebFetch allow rules;
+        # null turns the rules off and checks only the sources file.
+        "settingsFile": ".claude/settings.json",
+        # Hosts where anyone can publish (code hosts, registries, blogs, forums,
+        # community threads, social media). They may be linked but are never
+        # pre-approved, because a page there can carry instructions written by an
+        # attacker.
+        "neverPreapprove": [
+            "github.com", "*.github.com", "*.github.io", "*.githubusercontent.com",
+            "gitlab.com", "bitbucket.org", "npmjs.com", "*.npmjs.com", "pypi.org",
+            "crates.io", "pkg.go.dev", "medium.com", "*.medium.com", "substack.com",
+            "*.substack.com", "dev.to", "reddit.com", "*.reddit.com",
+            "stackoverflow.com", "*.stackexchange.com", "news.ycombinator.com",
+            "support.google.com", "techcommunity.microsoft.com", "x.com",
+            "twitter.com", "youtube.com", "*.youtube.com", "linkedin.com",
+            "*.linkedin.com", "pastebin.com",
+        ],
+        "reviewDays": 180,
+    },
 }
 
 # Lists that extend the defaults instead of replacing them.
@@ -89,6 +110,7 @@ _EXTEND_KEYS = {
     ("folderDocs", "symbolCheckSkip"),
     ("design", "exclude"),
     ("debug", "exclude"),
+    ("sources", "neverPreapprove"),
 }
 
 _GLOB_CACHE: dict = {}

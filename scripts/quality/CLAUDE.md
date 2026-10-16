@@ -1,6 +1,6 @@
 # scripts/quality
 
-Purpose: Quality checks vendored from scaffold-kit (folder docs and code map, debug leftovers, design tokens and contrast, palette generation); Python 3.9+, standard library only.
+Purpose: Quality checks vendored from scaffold-kit (folder docs and code map, debug leftovers, design tokens and contrast, palette generation, trusted sources); Python 3.9+, standard library only.
 
 Do not edit these files in a project: change behaviour through `quality.config.json` at the project root, and send improvements to the kit so every project gets them. Upgrade by replacing the whole folder with the kit's newer copy.
 
@@ -58,6 +58,13 @@ Generates OKLCH scales and complete light and dark token themes that pass the co
 - `build_scale(hue, peak, brand=None, lightness=None)` -> `list[tuple]`: (step, (L, C, H)) for steps 50 to 950
 - `build_theme(primary, highlight=None, tailwind=True)` -> `tuple[str, list[str]]`: theme CSS and notes; raises RuntimeError if a pair would fail
 - `build_preview(paths, title="Theme proposals")` -> `str`: standalone HTML page
+
+### sources.py
+Keeps Claude Code's WebFetch allow rules in `.claude/settings.json` in step with the https links in `docs/SOURCES.md`, never pre-approving wildcards or hosts where anyone can publish.
+- `main(argv=None)` -> `int`: commands `check`, `sync` and `domains`; exit 1 when problems are found, 2 on unreadable settings
+- `linked_domains(text)` -> `tuple[list, list]`: sorted https hosts, and (line, url) for every http link
+- `preapproved(hosts, never)` -> `list[str]`: the hosts that get an allow rule
+- `review_warning(text, today, max_days)` -> `str | None`: a warning when the "Last reviewed:" date is missing or too old
 
 ## Conventions
 - Each script runs on its own (`python3 scripts/quality/<script>.py --help`) and imports only these modules and the standard library.

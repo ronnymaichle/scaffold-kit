@@ -1,4 +1,4 @@
-# Privacy and cookie consent
+# Privacy, consent and legal documents
 
 Becomes `docs/PRIVACY.md`. Applies whenever the app serves people in the EU (GDPR and ePrivacy) and is good practice everywhere. Check the target country's regulator guidance (Spain: AEPD; France: CNIL). This is engineering guidance, not legal advice.
 
@@ -10,7 +10,19 @@ Becomes `docs/PRIVACY.md`. Applies whenever the app serves people in the EU (GDP
 - Retention periods are defined for logs, backups and deleted content.
 - User-generated content is public and indexable only when its owner publishes it. Precise locations are personal data: offer approximate locations where that matters. Deleted public content returns 410 and leaves the sitemap.
 - Any external service that processes personal data, including an AI service reading logs, is listed as a processor.
-- Publish a privacy policy, a cookie policy and any legally required notices for the target countries (Spain, for example, requires a legal notice with the owner's details).
+
+## Legal documents and terms
+
+- Public apps publish, each at a stable URL linked from the footer and the sign-up form: the terms of service, the privacy policy, the cookie policy, and any legal notices the target countries require (Spain, for example, requires a legal notice with the owner's details). Apps that take payments add pricing, cancellation and refund terms that follow consumer law in the target countries (in the EU, for example, the 14-day right of withdrawal and its exceptions for digital content).
+- The terms cover at least: who may use the app and the minimum age, account rules, acceptable use and prohibited content, who owns user content and the licence the app needs to display it, suspension and termination, liability limits, the governing law, and how users are told about changes.
+- Each document is versioned: its text lives in the repository with a version and an effective date, and earlier versions stay readable at their own URLs. Each change is marked material (it changes users' rights or obligations) or editorial (typos, clarifications).
+- Accepting the terms is an explicit action at sign-up: an unticked checkbox, or a button that says what it does ("Create account and accept the terms"), next to links to the terms and the privacy policy. Marketing email needs its own unticked opt-in and is never bundled with the terms.
+- The privacy policy is information, not a contract: users are shown it, not asked to agree to it, because consent is the legal basis only for the specific processing that asks for it.
+- Acceptances are recorded on the server in an append-only table (user, document, version, accepted at), without IP addresses or user agents unless the target countries' law requires them. The table is in the data inventory, with its retention.
+- Material changes are announced in advance by email and in the app, with the notice period the terms set (for example 30 days). After the effective date, signed-in users who have not accepted the current version see a screen that summarizes the changes and lets them accept, or export their data and delete the account. Editorial changes need no new acceptance.
+- Minimum age: the terms set it from the target countries' rules (GDPR lets each EU country set the age of digital consent between 13 and 16, for example 14 in Spain; COPPA in the US covers children under 13), and sign-up asks users to confirm it, or asks for a birth date where the law or the audience requires one. An app meant for children needs verifiable parental consent and the strict profile.
+- Apps that host user content state their content rules in the terms, put a report action on every piece of public content, follow a takedown process with response times, and publish a contact point. Check whether the EU Digital Services Act applies and which notice and statement-of-reasons duties it brings.
+- Tests: sign-up fails without accepting the terms; a new material version shows the acceptance screen to existing users and records their acceptance; earlier versions stay reachable; the marketing opt-in stays off unless ticked.
 
 ## Cookie consent
 
@@ -26,8 +38,13 @@ Becomes `docs/PRIVACY.md`. Applies whenever the app serves people in the EU (GDP
 - Build: a small banner in the design system (themed, translated, keyboard and screen-reader accessible) or a maintained open-source library (for example vanilla-cookieconsent); verify current options with a web search.
 - Tests: e2e checks that before consent and after "Reject all" no non-necessary cookies are set and no analytics or marketing requests are made, that "Accept all" and per-category choices load only what was accepted, and that withdrawing consent stops tracking.
 
+## Lean profile
+
+Internal tools for known users skip the public terms and the acceptance flow unless the organization asks for them; the data inventory, retention and the privacy notice stay.
+
 ## Strict profile additions
 
+- A lawyer reviews the terms, the privacy policy and the cookie policy before launch and after every material change.
 - A data protection impact assessment (DPIA) when processing sensitive data or monitoring people at scale.
 - Records of processing activities kept current.
 - A breach response procedure: assess, contain, notify the supervisory authority within 72 hours when required, inform affected users.

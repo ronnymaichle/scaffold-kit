@@ -13,6 +13,13 @@ Recommend from the app's data shape and needs, preferring open-source or self-ho
 | Mobile-first apps with offline sync and realtime documents | Firebase (Firestore, Auth, Functions) | Proprietary; limited queries (including geo); costs grow per read and write |
 | Document-shaped data with highly variable fields and few relations | MongoDB (Atlas or self-hosted) | Postgres JSONB covers many of these cases |
 
+Moving between stores is scriptable only within one family, so the family is chosen here and recorded, with its exit path, in the data-and-auth ADR:
+
+- Postgres-compatible (self-hosted Postgres, Supabase, Neon, the host's managed Postgres): the same schema and migrations run on all of them, so a move is a new connection string, the migrations and a dump and restore of the data.
+- Firebase, and other platforms with a local emulator: local and hosted projects differ only in configuration, and the platform's CLI deploys between them.
+- Across families (Postgres and Firestore, or either and MongoDB): the queries, access rules, auth and data shape all change. That is a rewrite of the repositories plus a data migration, never a script; the repository layer keeps it to one layer of the code.
+- Platform auth (Supabase Auth, Firebase Auth) ties the user accounts to that platform; an in-app auth library with users in Postgres moves with the database.
+
 Offline-first apps need an explicit sync design whatever the store: local storage on the device, a queue of pending writes (including media uploads), conflict rules (last write wins, per-field merge or manual resolution) and a visible sync state for the user. Firestore offline persistence, PowerSync or ElectricSQL on Postgres, and CouchDB/PouchDB replication are common options; compare them for the case at hand.
 
 ## Auth
@@ -81,14 +88,16 @@ Verify current versions and support for special types such as PostGIS with a web
 
 ## Local and test databases
 
-- Development: the database runs in docker-compose with the same major version and extensions as production (for example Postgres with PostGIS). `db:reset` recreates it, `migrate` applies migrations, `db:seed` loads realistic fake data (for example Faker). Platforms use their local stacks (Supabase CLI, Firebase Emulator Suite).
+- Development: the database runs in docker-compose with the same major version and extensions as production (for example Postgres with PostGIS). `db:reset` recreates it, `migrate` applies migrations, `db:seed` loads realistic fake data (for example Faker). Platforms use their local stacks: `supabase start` runs the whole Supabase stack in Docker, and the Firebase Emulator Suite keeps seed data with `--import` and `--export-on-exit`.
+- Development never uses a hosted project, free tier included. Hosted projects are only for staging and production, so local work does not use up free-tier limits, keep a paused project awake or need a network, and fake data never reaches a hosted project.
+- Everything a hosted project needs is defined in the repository: migrations, Row Level Security policies and `supabase/config.toml` for Supabase; security rules, indexes and `firebase.json` for Firebase; functions for either. A change made in a hosted dashboard is copied back into the repository the same day, and the promote script (`docs/DEPLOYMENT.md`) applies the repository's version to each environment.
 - Tests: a separate test database, never the development one. Integration tests are isolated (a transaction rolled back per test, or a fresh database per worker with Testcontainers) and build data with factories rather than shared fixtures; e2e runs against a freshly migrated and seeded database (`docs/TESTING.md`).
 - Production data never goes to development or test machines; when realistic data is needed, use an anonymized dump.
 
 ## APIs
 
 - Inside a full-stack framework, prefer its own data loading and form actions; add JSON endpoints only for client-fetched data.
-- JSON endpoints share one error shape (`{ code, message, ref }` from the error catalog), cursor-based pagination with a maximum page size, idempotency keys on create and payment endpoints, rate limits and schema validation.
+- JSON endpoints share one error shape (`{ code, message, ref }` from the error catalog), cursor-based pagination with a maximum page size, idempotency keys on create and payment endpoints, rate limits and schema validation. Cross-origin access and incoming webhooks follow `docs/security/THREAT-MODEL.md`.
 - A public or mobile API gets a version prefix (`/api/v1`) and an OpenAPI description generated from the validation schemas.
 
 ## Caching

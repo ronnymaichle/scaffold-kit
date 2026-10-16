@@ -11,10 +11,11 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 ## Checkpoint A: foundation
 
 - [ ] Root `CLAUDE.md` from the kit template, with every `{{...}}` placeholder filled
+- [ ] `docs/SOURCES.md` from the kit reference, filtered to the stack, platforms, target countries and data, with today's review date; the WebFetch rules written with `python3 scripts/quality/sources.py sync` once the scripts are copied
 - [ ] Git initialized on `main`; the project created with the framework's official CLI and official integrations added through it (no hand-written boilerplate that a CLI generates)
 - [ ] `scripts/quality/` copied from the kit unchanged; `quality.config.json` from the template, with the theme file path and any extra excludes set
-- [ ] Tooling: formatter; linter with the ecosystem's security rules and a ban on `console.*` outside the logger; strict type checking; module-boundary lint rule; test runners; commitlint; git hooks from `templates/lefthook.yml`, each command checked against the installed tool's `--help`
-- [ ] Structure (only the folders the first features need), environment validation at startup, liveness and readiness endpoints, graceful shutdown
+- [ ] Tooling: formatter; linter with the ecosystem's security rules and a ban on `console.*` outside the logger; strict type checking; module-boundary lint rule; test runners; commitlint; git hooks from `templates/lefthook.yml`, each command checked against the installed tool's `--help`; package manager hardening (frozen installs, a minimum release age, install scripts only for trusted packages)
+- [ ] Structure (only the folders the first features need), environment validation at startup, liveness and readiness endpoints, graceful shutdown, security headers, same-origin CORS, and the client IP read only from the trusted proxy's header
 - [ ] `.gitignore` (including `.env`, `logs/`), `.gitattributes`, `.editorconfig`, `.env.example` with placeholders
 - [ ] Docs: `CONTRIBUTING.md` (git workflow and folder docs), `docs/ARCHITECTURE.md`, `docs/TESTING.md`, `docs/security/THREAT-MODEL.md`, `docs/security/findings.md`; ADRs `0001-stack` and `0002-branching`
 - [ ] Folder docs created with `folder_docs.py init`, every `TODO(describe)` replaced, code map generated
@@ -22,7 +23,9 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 
 ## Checkpoint B: data, auth and errors
 
-- [ ] Database in docker-compose with production's version and extensions; ORM and first migration; `migrate`, `db:reset` and `db:seed` with realistic fake data; a separate test database
+- [ ] Database in docker-compose with production's version and extensions, or the platform's local stack; ORM and first migration; `migrate`, `db:reset` and `db:seed` with realistic fake data; a separate test database; no hosted project used for development
+- [ ] Mail module with a local mail catcher (for example Mailpit) in docker-compose
+- [ ] Public apps: versioned legal documents and the append-only terms-acceptance table; the acceptance step itself is built with sign-up
 - [ ] DTO pattern and type checks spanning database, server and UI; schema-drift check in `check`
 - [ ] Auth library or platform installed and configured; sign-up and sign-in are built afterwards as the first feature, through the Feature workflow
 - [ ] Logger with redaction, `logs/dev.log` in development, error catalog, `AppError` and global error handling
@@ -42,12 +45,14 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 ## Checkpoint D: delivery, docs and verification
 
 - [ ] Multi-stage Dockerfile running as non-root, `.dockerignore`, docker-compose for local services
-- [ ] Scripts: `check` (format check, lint, type check including framework checks, schema drift, unit and integration tests, folder docs and code map, debug leftovers, design literals and contrast), `check:security` (dependency audit, gitleaks, Semgrep), `test:e2e` (with axe, SEO metadata and consent checks), `migrate`, `db:reset`, `db:seed`, `docs:codemap`
+- [ ] Scripts: `check` (format check, lint, type check including framework checks, schema drift, unit and integration tests, folder docs and code map, debug leftovers, design literals and contrast, trusted sources), `check:security` (dependency audit, gitleaks, Semgrep), `test:e2e` (with axe, SEO metadata and consent checks), `migrate`, `db:reset`, `db:seed`, `docs:codemap`, and the promote script `deploy:env` with `--dry-run`
 - [ ] CI on every PR from `templates/github/workflows/ci.yml`: `check`, `check:security`, `test:e2e`, image build, PR title lint
 - [ ] Docs: `docs/DEPLOYMENT.md`, `docs/SCALING.md`, `docs/OPERATIONS.md`, `docs/LAUNCH-CHECKLIST.md`; ADR `0005-hosting`; root `SECURITY.md`, PR and issue templates, `README.md` (what it is, quick start, commands, links to the docs)
 - [ ] Verify:
   - [ ] `check`, `check:security` and the e2e smoke test pass
   - [ ] docker-compose starts; migrations apply to an empty database and the seed runs
+  - [ ] `deploy:env staging --dry-run` lists every promote step and changes nothing
+  - [ ] a test email lands in the local mail catcher
   - [ ] liveness and readiness respond
   - [ ] robots.txt and sitemap.xml are served, and the noindex header appears outside production
   - [ ] with the `noop` adapter there are no third-party requests and no non-necessary cookies
