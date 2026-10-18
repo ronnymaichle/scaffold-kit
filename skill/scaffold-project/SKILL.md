@@ -25,7 +25,7 @@ If the user points to a local copy of the kit, use that instead. If the kit cann
 | Kit path | Contents |
 |---|---|
 | `references/` | The full rules, one file per area. Read each one before the step that needs it; its first lines name the project docs it becomes. |
-| `templates/` | Root `CLAUDE.md` with the Feature, Hotfix and Release workflows; `SCAFFOLD-PROGRESS.md`; `LAUNCH-CHECKLIST.md`; `adr.md`; `folder-CLAUDE.md`; `SECURITY.md`; `github/` (PR and issue templates, CI); `lefthook.yml`; `commitlint.config.mjs`; `quality.config.json`; `editorconfig`; `gitattributes`; `claude/` (the lead's model in `settings.json` and the agent definitions in `agents/`, copied to `.claude/`) |
+| `templates/` | Root `CLAUDE.md` with the Feature, Hotfix and Release workflows; `SCAFFOLD-PROGRESS.md`; `LAUNCH-CHECKLIST.md`; `adr.md`; `folder-CLAUDE.md`; `SECURITY.md`; `github/` (PR and issue templates, CI); `lefthook.yml`; `commitlint.config.mjs`; `quality.config.json`; `editorconfig`; `gitattributes`; `claude/` (the lead's model in `settings.json`, the agent definitions in `agents/` and the stack-conventions skill in `skills/`, copied to `.claude/`) |
 | `scripts/quality/` | Check scripts (Python 3.9+, standard library only): folder docs and code map, debug leftovers, design tokens and contrast, palette generator, trusted sources |
 
 ## Choose the mode
@@ -91,7 +91,7 @@ The rules apply from the first line of code; only some of the tooling that enfor
 | `logging.md` | `docs/LOGGING.md` |
 | `testing.md` | `docs/TESTING.md` |
 | `sources.md` | `docs/SOURCES.md` |
-| `agents.md` | `docs/AGENT-TEAM.md`, `.claude/agents/`, the lead's model in `.claude/settings.json` |
+| `agents.md` | `docs/AGENT-TEAM.md`, `.claude/agents/`, `.claude/skills/stack-conventions/`, the lead's model in `.claude/settings.json` |
 
 7. Colors: generate the proposals with `scripts/quality/palette.py`, show the user the preview page, and apply only the approved theme (`references/design.md`).
 8. The checkpoint commits on `main` are the only commits without a PR. Creating the remote repository, pushing and applying branch protection happen only with the user's approval.
