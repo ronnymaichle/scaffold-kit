@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.2.0 (2026-10-18)
+
+- Agent team: new reference `references/agents.md`, which becomes `docs/AGENT-TEAM.md`. The main session leads on Opus at `xhigh` effort, writes the plan to `.claude/plan.md` and delegates slices to specialist agents: `implementer` (Opus, high), `test-runner` (Haiku, low, in the background), `reviewer` (Opus, xhigh, fresh context, no edit tools), `debugger` (Opus, high) and, on the strict profile, `security-auditor` (Opus, max). Agents report only to the lead, in one shared format with the evidence for their status.
+- Loop limits: two attempts per failure before an agent stops as `blocked`, a `maxTurns` limit on every agent, one review round that re-checks only its own findings, test results reused for an unchanged commit, and one owner per slice and per file.
+- Agent teams stay off in project settings and are enabled per session only for parallel review, competing-hypothesis debugging and multi-layer features with separate files.
+- New templates in `templates/claude/`: `settings.json` pins the lead's model and sets its effort through `modelSettings` (a top-level `effortLevel` is ignored by Opus 5.5 and later), and `agents/` holds the five agent definitions. New test `tests/test_agent_templates.py` checks their frontmatter, the read-only roles, the report format, the roster table and the lead settings.
+- The root `CLAUDE.md` template gains an Agents line, and Feature steps 7 and 8 and Hotfix step 1 name the agents. The scaffold progress checklist copies `.claude/` in checkpoint A and ignores `.claude/plan.md`. `references/sources.md` lists the Claude Code documentation for keeping models and effort levels current.
+- Projects: in upgrade mode, write `docs/AGENT-TEAM.md`, copy `templates/claude/agents/` to `.claude/agents/` (keeping the roles the profile needs), merge `model` and `modelSettings` from `templates/claude/settings.json` into `.claude/settings.json`, add `.claude/plan.md` to `.gitignore`, add the Claude Code rows to `docs/SOURCES.md` and run `sources.py sync`, and update the root `CLAUDE.md` lines.
+
 ## 2.1.2 (2026-10-16)
 
 - The scaffold-kit-maintainer skill's source moved from `.claude/skills/scaffold-kit-maintainer/` to `skill/scaffold-kit-maintainer/`, next to the scaffold-project source. The repository no longer has a `.claude/skills/` folder, so Claude Code loads only the copy saved in claude.ai; the root `CLAUDE.md` names the source file to read when that copy is not available.

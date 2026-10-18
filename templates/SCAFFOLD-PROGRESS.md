@@ -16,8 +16,9 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 - [ ] `scripts/quality/` copied from the kit unchanged; `quality.config.json` from the template, with the theme file path and any extra excludes set
 - [ ] Tooling: formatter; linter with the ecosystem's security rules and a ban on `console.*` outside the logger; strict type checking; module-boundary lint rule; test runners; commitlint; git hooks from `templates/lefthook.yml`, each command checked against the installed tool's `--help`; package manager hardening (frozen installs, a minimum release age, install scripts only for trusted packages)
 - [ ] Structure (only the folders the first features need), environment validation at startup, liveness and readiness endpoints, graceful shutdown, security headers, same-origin CORS, and the client IP read only from the trusted proxy's header
-- [ ] `.gitignore` (including `.env`, `logs/`), `.gitattributes`, `.editorconfig`, `.env.example` with placeholders
-- [ ] Docs: `CONTRIBUTING.md` (git workflow and folder docs), `docs/ARCHITECTURE.md`, `docs/TESTING.md`, `docs/security/THREAT-MODEL.md`, `docs/security/findings.md`; ADRs `0001-stack` and `0002-branching`
+- [ ] `.claude/settings.json` and `.claude/agents/` from the kit's `templates/claude/`, keeping the agents the profile needs (`docs/AGENT-TEAM.md`)
+- [ ] `.gitignore` (including `.env`, `logs/`, `.claude/plan.md`), `.gitattributes`, `.editorconfig`, `.env.example` with placeholders
+- [ ] Docs: `CONTRIBUTING.md` (git workflow and folder docs), `docs/ARCHITECTURE.md`, `docs/TESTING.md`, `docs/AGENT-TEAM.md`, `docs/security/THREAT-MODEL.md`, `docs/security/findings.md`; ADRs `0001-stack` and `0002-branching`
 - [ ] Folder docs created with `folder_docs.py init`, every `TODO(describe)` replaced, code map generated
 - [ ] `check` passes; commit `chore(scaffold): foundation`
 

@@ -25,7 +25,7 @@ If the user points to a local copy of the kit, use that instead. If the kit cann
 | Kit path | Contents |
 |---|---|
 | `references/` | The full rules, one file per area. Read each one before the step that needs it; its first lines name the project docs it becomes. |
-| `templates/` | Root `CLAUDE.md` with the Feature, Hotfix and Release workflows; `SCAFFOLD-PROGRESS.md`; `LAUNCH-CHECKLIST.md`; `adr.md`; `folder-CLAUDE.md`; `SECURITY.md`; `github/` (PR and issue templates, CI); `lefthook.yml`; `commitlint.config.mjs`; `quality.config.json`; `editorconfig`; `gitattributes` |
+| `templates/` | Root `CLAUDE.md` with the Feature, Hotfix and Release workflows; `SCAFFOLD-PROGRESS.md`; `LAUNCH-CHECKLIST.md`; `adr.md`; `folder-CLAUDE.md`; `SECURITY.md`; `github/` (PR and issue templates, CI); `lefthook.yml`; `commitlint.config.mjs`; `quality.config.json`; `editorconfig`; `gitattributes`; `claude/` (the lead's model in `settings.json` and the agent definitions in `agents/`, copied to `.claude/`) |
 | `scripts/quality/` | Check scripts (Python 3.9+, standard library only): folder docs and code map, debug leftovers, design tokens and contrast, palette generator, trusted sources |
 
 ## Choose the mode
@@ -65,7 +65,7 @@ Security defaults, tests-first, folder docs, the error catalog and the three wor
 
 If the user named a stack, use it, but first flag any serious security, scalability, SEO or fit problem. Otherwise recommend a primary option and a runner-up, each with its fit for the idea, trade-offs, learning curve given what the user knows, security posture (secure defaults, maturity, patch cadence), scaling, SEO fit (server rendering for public pages), hosting fit and cost (free tiers, self-hosting). The options and their trade-offs are in `references/architecture.md`, `backend.md`, `hosting.md` and `design.md`. Prefer mature, well-documented, actively maintained frameworks with secure defaults. For the data store, say which family it locks in and what a later move would take: within a family a new connection string and the promote script, across families a rewrite of the data layer (`references/backend.md`).
 
-Then summarize the plan in a few lines and wait for confirmation. Keep that reply proportional to the project: for a small or lean project, a short plan and only the questions whose answers would change it. Cover: profile; architecture; data store and ORM; auth approach; caching; local development and the promote script; hosting, edge protection, email, staging and scaling path; branching model; styling, component base and toast library; colors (the user's, or 2-3 proposals to preview); SEO, analytics, consent, legal documents and languages; test, logging and security tooling; and what waits for Phase 2.
+Then summarize the plan in a few lines and wait for confirmation. Keep that reply proportional to the project: for a small or lean project, a short plan and only the questions whose answers would change it. Cover: profile; architecture; data store and ORM; auth approach; caching; local development and the promote script; hosting, edge protection, email, staging and scaling path; branching model; styling, component base and toast library; colors (the user's, or 2-3 proposals to preview); SEO, analytics, consent, legal documents and languages; test, logging and security tooling; the agent roster for the profile (`references/agents.md`); and what waits for Phase 2.
 
 ## 4. Phase 1: scaffold in four checkpoints
 
@@ -91,6 +91,7 @@ The rules apply from the first line of code; only some of the tooling that enfor
 | `logging.md` | `docs/LOGGING.md` |
 | `testing.md` | `docs/TESTING.md` |
 | `sources.md` | `docs/SOURCES.md` |
+| `agents.md` | `docs/AGENT-TEAM.md`, `.claude/agents/`, the lead's model in `.claude/settings.json` |
 
 7. Colors: generate the proposals with `scripts/quality/palette.py`, show the user the preview page, and apply only the approved theme (`references/design.md`).
 8. The checkpoint commits on `main` are the only commits without a PR. Creating the remote repository, pushing and applying branch protection happen only with the user's approval.
