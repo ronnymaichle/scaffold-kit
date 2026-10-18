@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.3.0 (2026-10-18)
+
+- Stack expertise: new skill template `templates/claude/skills/stack-conventions/SKILL.md`, written at scaffold time from the official docs for the exact versions in the lockfile. It records the conventional and the currently recommended way per topic, the project's choice where they differ, and the traps (old APIs that still look plausible), each with its source and date. The `implementer`, `reviewer`, `debugger`, `designer` and `architect` preload it; it is refreshed on major upgrades and in the quarterly `chore(agents)` review.
+- New `designer` agent (Opus, high, no edit tools): proposes layout, components, states, feedback and accessibility for new screens at planning time, and reviews every change to the project's UI paths at Feature step 8, in parallel with the `reviewer` and within the same single review round.
+- New `architect` agent (Opus, xhigh, no edit tools, can fetch the trusted sources): consulted only for a new architecture pattern, a framework or major-version migration, a core dependency, or a choice where the conventional and recommended ways differ. It returns options with sources and dates and drafts the ADR; routine features do not use it.
+- `references/agents.md` gains the Stack expertise and UI work sections; the lean profile keeps the designer for new screens only and drops the architect. The root `CLAUDE.md` template's Agents line and Feature steps 2, 4 and 8 name the new agents. Tests check that the advisory agents cannot edit, that coding agents preload the skill, and the skill template's structure.
+- Projects: in upgrade mode, copy `designer.md` and (standard and strict) `architect.md` into `.claude/agents/`, add the `skills` preload to the existing `implementer`, `reviewer` and `debugger`, write `.claude/skills/stack-conventions/SKILL.md` from the official docs for the installed versions and add those pages to `docs/SOURCES.md` (then `sources.py sync`), list the UI paths in `docs/AGENT-TEAM.md`, and update the root `CLAUDE.md` lines.
+
 ## 2.2.0 (2026-10-18)
 
 - Agent team: new reference `references/agents.md`, which becomes `docs/AGENT-TEAM.md`. The main session leads on Opus at `xhigh` effort, writes the plan to `.claude/plan.md` and delegates slices to specialist agents: `implementer` (Opus, high), `test-runner` (Haiku, low, in the background), `reviewer` (Opus, xhigh, fresh context, no edit tools), `debugger` (Opus, high) and, on the strict profile, `security-auditor` (Opus, max). Agents report only to the lead, in one shared format with the evidence for their status.

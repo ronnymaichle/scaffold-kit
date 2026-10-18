@@ -8,12 +8,15 @@ from test_skill_files import frontmatter
 
 AGENTS = KIT / "templates" / "claude" / "agents"
 SETTINGS = KIT / "templates" / "claude" / "settings.json"
+STACK_SKILL = KIT / "templates" / "claude" / "skills" / "stack-conventions" / "SKILL.md"
 REFERENCE = KIT / "references" / "agents.md"
 
 EFFORTS = {"low", "medium", "high", "xhigh", "max"}
 MODEL_ALIASES = {"opus", "sonnet", "haiku", "fable", "inherit"}
 WRITE_TOOLS = {"Edit", "Write", "NotebookEdit"}
-READ_ONLY = {"reviewer", "security-auditor"}
+READ_ONLY = {"reviewer", "security-auditor", "designer", "architect"}
+# Agents that write or judge code get the project's stack conventions preloaded.
+PRELOADS_STACK = {"implementer", "reviewer", "debugger", "designer", "architect"}
 
 
 def roster_in_reference():
@@ -57,6 +60,24 @@ class AgentTemplateTests(unittest.TestCase):
 
     def test_roster_matches_templates(self):
         self.assertEqual(roster_in_reference(), {p.stem for p in self.agent_files()})
+
+    def test_code_agents_preload_the_stack_skill(self):
+        for name in PRELOADS_STACK:
+            with self.subTest(agent=name):
+                text = (AGENTS / f"{name}.md").read_text(encoding="utf-8")
+                block = text[4:text.index("\n---", 4)]
+                self.assertRegex(block, r"(?m)^skills:\n  - stack-conventions$")
+
+    def test_stack_skill_template(self):
+        text = STACK_SKILL.read_text(encoding="utf-8")
+        fields = frontmatter(text)
+        self.assertEqual(fields.get("name"), "stack-conventions")
+        self.assertTrue(fields.get("description"))
+        # Preloading skips skills that disable model invocation.
+        self.assertNotIn("disable-model-invocation", fields)
+        for heading in ("## Conventional and recommended", "## Traps", "## Sources"):
+            self.assertIn(heading, text)
+        self.assertIn("{{", text, "filled in at scaffold time from the official docs")
 
     def test_lead_settings(self):
         settings = json.loads(SETTINGS.read_text(encoding="utf-8"))

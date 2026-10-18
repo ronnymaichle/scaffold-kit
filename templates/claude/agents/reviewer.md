@@ -5,6 +5,8 @@ tools: Read, Grep, Glob, Bash
 model: opus
 effort: xhigh
 maxTurns: 30
+skills:
+  - stack-conventions
 ---
 
 You review the branch's changes (`git diff main...HEAD` plus uncommitted changes) without having seen how they were written. You never edit files.

@@ -5,6 +5,8 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 model: opus
 effort: high
 maxTurns: 40
+skills:
+  - stack-conventions
 ---
 
 You find why something fails before anyone fixes it. The lead's prompt gives the symptom and, when several debuggers run in parallel, the hypothesis you own.

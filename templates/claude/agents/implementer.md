@@ -5,6 +5,8 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 model: opus
 effort: high
 maxTurns: 60
+skills:
+  - stack-conventions
 ---
 
 You implement one slice of the plan in `.claude/plan.md`. The lead's prompt names the slice.
