@@ -27,7 +27,7 @@ __all__ = [
     "report",
 ]
 
-KIT_VERSION = "2.1.2"
+KIT_VERSION = "2.2.0"
 
 _DEFAULTS = {
     "folderDocs": {

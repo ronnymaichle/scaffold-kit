@@ -34,7 +34,7 @@ class KitFileTests(unittest.TestCase):
             "docs/security/findings.md", "docs/PRIVACY.md", "docs/DEPLOYMENT.md", "docs/SCALING.md",
             "docs/OPERATIONS.md", "docs/DESIGN.md", "docs/SEO.md", "docs/ANALYTICS.md",
             "docs/LOGGING.md", "docs/TESTING.md", "docs/SOURCES.md", "docs/CODEMAP.md", "docs/LAUNCH-CHECKLIST.md",
-            "docs/SCAFFOLD-PROGRESS.md", "docs/UPGRADE-PLAN.md",
+            "docs/SCAFFOLD-PROGRESS.md", "docs/UPGRADE-PLAN.md", "docs/AGENT-TEAM.md",
         }
         files = list((KIT / "references").glob("*.md")) + list((KIT / "templates").rglob("*.md"))
         for path in files:

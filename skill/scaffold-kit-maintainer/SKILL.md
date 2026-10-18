@@ -19,6 +19,7 @@ description: "Change the scaffold-project skill or its scaffold-kit repository (
 | A rule projects follow (security, data, testing, design, SEO, logging and so on) | The reference for that area in `references/` | Its summary line in `templates/CLAUDE.md`, if it has one |
 | Lean or strict variations | The "Lean profile" or "Strict profile additions" section of that reference | The profile table in the skill, if what a profile means changes |
 | The Feature, Hotfix or Release workflow, or the root rules summary | `templates/CLAUDE.md` | It must stay under 200 lines (a test checks) |
+| The agent roster, a role's model, effort, tools or turn limit, or how agents hand off work | `references/agents.md` and the matching file in `templates/claude/` | `tests/test_agent_templates.py` keeps the roster table and the templates in step |
 | What Phase 1 builds, or in which checkpoint | `templates/SCAFFOLD-PROGRESS.md` | Skill step 4, only if the checkpoints themselves change |
 | Launch items | `templates/LAUNCH-CHECKLIST.md` | |
 | PR and issue templates, project CI, hooks, commitlint, editor and git configs | The file in `templates/` | `references/git-workflow.md`, if the rule behind it changes |
