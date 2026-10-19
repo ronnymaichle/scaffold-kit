@@ -5,6 +5,7 @@ Phase 1 in four checkpoints. Each checkpoint ends with `check` passing and one c
 - Kit: scaffold-kit {{KIT_VERSION}} (fetch the same tag again if the local copy is gone)
 - Profile: {{PROFILE}}
 - Confirmed plan: {{PLAN_SUMMARY}}
+- Approved draft: {{APPROVED_DRAFT: the draft folder, the chosen theme with the palette.py command that regenerates it, and the look}}
 
 Items that do not apply to the profile are deleted when this file is created. Each doc is written from its kit reference and holds only what applies to this stack and profile, with scaffold-time tables replaced by the decision and its reason.
 
@@ -18,13 +19,14 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 - [ ] Structure (only the folders the first features need), environment validation at startup, liveness and readiness endpoints, graceful shutdown, security headers, same-origin CORS, and the client IP read only from the trusted proxy's header
 - [ ] `.claude/settings.json` and `.claude/agents/` from the kit's `templates/claude/`, keeping the agents the profile needs (`docs/AGENT-TEAM.md`); `.claude/skills/stack-conventions/SKILL.md` written from the official docs for the installed versions, each entry with its source and date, and those pages added to `docs/SOURCES.md`
 - [ ] `.gitignore` (including `.env`, `logs/`, `.claude/plan.md`), `.gitattributes`, `.editorconfig`, `.env.example` with placeholders
-- [ ] Docs: `CONTRIBUTING.md` (git workflow and folder docs), `docs/ARCHITECTURE.md`, `docs/TESTING.md`, `docs/AGENT-TEAM.md`, `docs/security/THREAT-MODEL.md`, `docs/security/findings.md`; ADRs `0001-stack` and `0002-branching`
+- [ ] For apps with screens: `docs/mockups/` from the approved draft, with only its screens and the approved theme left, and that theme's CSS file next to it
+- [ ] Docs: `CONTRIBUTING.md` (git workflow and folder docs), `docs/ARCHITECTURE.md` (the approved diagrams, and the payloads under Planned actions), `docs/TESTING.md`, `docs/AGENT-TEAM.md`, `docs/security/THREAT-MODEL.md`, `docs/security/findings.md`; ADRs `0001-stack` and `0002-branching`
 - [ ] Folder docs created with `folder_docs.py init`, every `TODO(describe)` replaced, code map generated
 - [ ] `check` passes; commit `chore(scaffold): foundation`
 
 ## Checkpoint B: data, auth and errors
 
-- [ ] Database in docker-compose with production's version and extensions, or the platform's local stack; ORM and first migration; `migrate`, `db:reset` and `db:seed` with realistic fake data; a separate test database; no hosted project used for development
+- [ ] Database in docker-compose with production's version and extensions, or the platform's local stack; ORM and the first migration, from the approved data model; `migrate`, `db:reset` and `db:seed` with realistic fake data; a separate test database; no hosted project used for development
 - [ ] Mail module with a local mail catcher (for example Mailpit) in docker-compose
 - [ ] Public apps: versioned legal documents and the append-only terms-acceptance table; the acceptance step itself is built with sign-up
 - [ ] DTO pattern and type checks spanning database, server and UI; schema-drift check in `check`
@@ -35,12 +37,12 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 
 ## Checkpoint C: interface and public web
 
-- [ ] Palette approved by the user on the `palette.py` preview page; theme file written; contrast check green
+- [ ] Theme file written from the theme approved with the draft, with the look's radius; the look's font self-hosted and its density set as the base components' default size; contrast check green
 - [ ] Tokens wired into the styling framework; light, dark and system themes with the switcher; component base; root toaster, banner slot, flash messages and the `notify` module; dev design page (not in the lean profile)
 - [ ] Shared head component, robots.txt and sitemap.xml routes, noindex outside production
 - [ ] Analytics module with the `noop` adapter and the event catalog; consent state, necessary only, with the banner hidden until a non-necessary adapter is enabled (not in the lean profile)
 - [ ] i18n, if two or more languages are planned
-- [ ] Docs: `docs/DESIGN.md` (source colors, rationale, contrast table), `docs/SEO.md`, `docs/ANALYTICS.md`, the cookie consent section of `docs/PRIVACY.md`; ADR `0004-design-system`
+- [ ] Docs: `docs/DESIGN.md` (source colors, rationale, the look, contrast table), `docs/SEO.md`, `docs/ANALYTICS.md`, the cookie consent section of `docs/PRIVACY.md`; ADR `0004-design-system`
 - [ ] Folder docs and code map updated; `check` passes; commit `chore(scaffold): interface and public web`
 
 ## Checkpoint D: delivery, docs and verification

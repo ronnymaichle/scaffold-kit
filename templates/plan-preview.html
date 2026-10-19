@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{PROJECT_NAME}} draft</title>
+<!--
+  The plan-step draft (architecture.md: Draft before code; design.md: Look and Screen mockups).
+  Copy to "${TMPDIR:-/tmp}/plan-preview/index.html", next to the themes/ folder palette.py writes, fill every {{...}}
+  in the user's language, and delete what does not apply: an API without screens keeps Architecture, Data model and
+  Planned actions; the lean profile keeps the system diagram, the data model and the main screen.
+  Never committed. After approval the diagrams and payloads go into docs/ARCHITECTURE.md and the screens into docs/mockups/.
+  In Mermaid text, write < and & as &lt; and &amp;.
+-->
+<link id="theme" rel="stylesheet" href="themes/a.css">
+<!-- Preview only: the chosen font from a pinned Fontsource package (the app self-hosts it), for example
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/inter@5.2.5/index.css"> -->
+<style id="look">
+  /* The look: font and corners. Density shows in the mockups' control sizes. */
+  :root { --font-sans: {{FONT_STACK}}; --radius: {{RADIUS}}; }
+</style>
+<style>
+  /* Page chrome. The fallbacks keep the page readable for an API without a theme. */
+  *, *::before, *::after { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { --frame-width: 390px; margin: 0; font: 15px/1.5 var(--font-sans, system-ui, sans-serif); background: var(--muted, #f4f4f5); color: var(--foreground, #18181b); }
+  .bar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; padding: 10px 16px; background: var(--background, #fff); border-bottom: 1px solid var(--border, #e4e4e7); }
+  .bar nav { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .bar a { color: inherit; }
+  .bar .date { color: var(--muted-foreground, #52525b); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-left: auto; }
+  .controls button, .controls select { font: inherit; font-size: 14px; padding: 4px 10px; border: 1px solid var(--input, #a1a1aa); border-radius: 6px; background: var(--background, #fff); color: inherit; cursor: pointer; }
+  .controls button[aria-pressed="true"] { background: var(--primary, #18181b); color: var(--primary-foreground, #fff); border-color: transparent; }
+  main { max-width: 1280px; margin: 0 auto; padding: 24px 16px 64px; display: grid; gap: 40px; }
+  h2 { margin: 0 0 12px; font-size: 20px; }
+  h3 { margin: 0 0 8px; font-size: 16px; }
+  pre.mermaid { margin: 0 0 24px; padding: 16px; background: var(--background, #fff); border: 1px solid var(--border, #e4e4e7); border-radius: 12px; overflow-x: auto; }
+  .card { margin: 0 0 12px; padding: 16px; background: var(--card, #fff); color: var(--card-foreground, inherit); border: 1px solid var(--border, #e4e4e7); border-radius: 12px; }
+  .card small { font-weight: 400; color: var(--muted-foreground, #52525b); }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
+  dt { font-weight: 600; }
+  dd { margin: 0; }
+  figure { margin: 0 0 32px; }
+  figcaption { margin: 0 0 8px; font-weight: 600; }
+  .frame { width: min(var(--frame-width), 100%); container: screen / inline-size; background: var(--background); color: var(--foreground); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+</style>
+<style id="screens">
+  /* Mockup styles: tokens only (var(--primary), var(--muted-foreground), var(--radius) and so on), mobile first,
+     with @container screen (min-width: 768px) for wider layouts, so the width switch shows both. For example:
+     .app-main { display: grid; gap: 12px; padding: 16px; }
+     @container screen (min-width: 768px) { .app-main { grid-template-columns: 320px 1fr; } } */
+</style>
+</head>
+<body>
+<header class="bar">
+  <strong>{{PROJECT_NAME}}</strong>
+  <span class="date">Draft, {{DATE}}</span>
+  <nav aria-label="Sections">
+    <a href="#architecture">Architecture</a>
+    <a href="#data">Data model</a>
+    <a href="#actions">Planned actions</a>
+    <a href="#look">Look</a>
+    <a href="#screens">Screens</a>
+  </nav>
+  <div class="controls">
+    <label>Theme
+      <select id="theme-select">
+        <option value="themes/a.css">A: {{THEME_A}}</option>
+        <option value="themes/b.css">B: {{THEME_B}}</option>
+      </select>
+    </label>
+    <button type="button" id="mode" aria-pressed="false">Dark</button>
+    <span role="group" aria-label="Screen width">
+      <button type="button" data-width="390px" aria-pressed="true">Phone</button>
+      <button type="button" data-width="1200px" aria-pressed="false">Desktop</button>
+    </span>
+  </div>
+</header>
+<main>
+  <section id="architecture">
+    <h2>System</h2>
+    <pre class="mermaid">
+{{SYSTEM_DIAGRAM: a flowchart of the users, the app's parts, the data stores and every outside service, with what crosses each arrow; about a dozen boxes}}
+    </pre>
+    <h2>Main flow: {{MAIN_TASK}}</h2>
+    <pre class="mermaid">
+{{MAIN_FLOW: a sequenceDiagram from the browser through route, service and repository to the database and back, ending with the feedback the user sees}}
+    </pre>
+  </section>
+
+  <section id="data">
+    <h2>Data model</h2>
+    <pre class="mermaid">
+{{DATA_MODEL: an erDiagram of the entities, their key fields and relationships}}
+    </pre>
+  </section>
+
+  <section id="actions">
+    <h2>Planned actions</h2>
+    <!-- One card per main action, in the format of Planned actions in docs/ARCHITECTURE.md. -->
+    <article class="card">
+      <h3>{{ACTION}} <small>({{WHO_MAY_CALL_IT}})</small></h3>
+      <dl>
+        <dt>Input</dt><dd>{{INPUT}}</dd>
+        <dt>Success</dt><dd>{{SUCCESS_RESULT}}</dd>
+        <dt>Errors</dt><dd>{{ERROR_CODES}}</dd>
+      </dl>
+    </article>
+  </section>
+
+  <section id="look">
+    <h2>Look</h2>
+    <div class="card">
+      <dl>
+        <dt>Font</dt><dd>{{FONT_AND_REASON}}</dd>
+        <dt>Density</dt><dd>{{DENSITY_AND_REASON}}</dd>
+        <dt>Corners</dt><dd>{{CORNERS_AND_REASON}}</dd>
+        <dt>Motion</dt><dd>{{MOTION_AND_REASON}}</dd>
+      </dl>
+    </div>
+    <p><a href="themes/index.html">Compare the color proposals in detail</a>: swatches, components and contrast results in light and dark.</p>
+  </section>
+
+  <section id="screens">
+    <h2>Screens</h2>
+    <!-- One figure per screen: the main state, plus the empty state of the screen a new user lands on.
+         Plain HTML with real labels and realistic fake data; no logic. -->
+    <figure>
+      <figcaption>{{SCREEN_NAME}}: {{WHAT_THE_USER_DOES_HERE}}</figcaption>
+      <div class="frame">
+        {{SCREEN_MARKUP}}
+      </div>
+    </figure>
+  </section>
+</main>
+<script>
+  // The switches work without the network; only the diagrams need it.
+  (function () {
+    var root = document.documentElement;
+    var theme = document.getElementById("theme");
+    var select = document.getElementById("theme-select");
+    if (select) select.addEventListener("change", function () { theme.href = select.value; });
+    var mode = document.getElementById("mode");
+    mode.addEventListener("click", function () {
+      var dark = root.classList.toggle("dark");
+      mode.setAttribute("aria-pressed", String(dark));
+      document.dispatchEvent(new CustomEvent("draft-mode"));
+    });
+    var widths = document.querySelectorAll("[data-width]");
+    widths.forEach(function (button) {
+      button.addEventListener("click", function () {
+        document.body.style.setProperty("--frame-width", button.dataset.width);
+        widths.forEach(function (other) { other.setAttribute("aria-pressed", String(other === button)); });
+      });
+    });
+  })();
+</script>
+<script type="module">
+  // Pinned Mermaid build; diagrams stay readable as text when it cannot load.
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.esm.min.mjs";
+  const diagrams = [...document.querySelectorAll("pre.mermaid")];
+  for (const el of diagrams) el.dataset.source = el.textContent;
+  async function render() {
+    const dark = document.documentElement.classList.contains("dark");
+    mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "neutral" });
+    for (const el of diagrams) {
+      el.removeAttribute("data-processed");
+      el.textContent = el.dataset.source;
+    }
+    await mermaid.run({ nodes: diagrams });
+  }
+  document.addEventListener("draft-mode", render);
+  render();
+</script>
+</body>
+</html>

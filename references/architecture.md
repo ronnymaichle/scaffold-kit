@@ -22,9 +22,10 @@ Verify current versions and maintenance status with a web search before recommen
 
 - Routes and handlers stay thin: parse, validate, authorize, call a service, return.
 - Business logic lives in services as plain functions. Dependencies (database, storage, cache, queue, logger, analytics, clock) are passed in, so tests can swap them and infrastructure can change without touching business logic.
-- Domain modules talk to each other only through their public API (one index file per module). A boundary lint rule (for example eslint-plugin-boundaries or dependency-cruiser) blocks imports of another module's internals.
-- Plain functions and modules over classes, unless the framework is class-based.
+- Domain modules talk to each other only through their public API (one index file per module). A boundary lint rule (for example eslint-plugin-boundaries or dependency-cruiser) blocks imports of another module's internals, and imports that break the UI's component levels (`docs/DESIGN.md`).
+- Composition over inheritance: behaviour is built from small functions, modules and components that each do one job and are combined by the code that uses them, so a new feature mostly combines existing parts. Plain functions and modules over classes, unless the framework is class-based.
 - No speculative abstractions (YAGNI): no generic base classes, no repositories for a single use, no microservices, Kubernetes or distributed caches before a measured need.
+- Shared code is extracted on its third repetition, not before: until then the copies may still grow apart, and a wrong shared abstraction costs more than a little duplication. It moves into the module that owns the concept, or into a shared module when several domains use it.
 - Errors are explicit and typed (`docs/LOGGING.md`). Never swallow them.
 - Every new dependency is justified: what it replaces, maintenance status, adoption, known vulnerabilities and malicious-package reports, checked in the trusted sources (`docs/SOURCES.md`). Prefer the standard library or framework built-ins.
 
@@ -40,6 +41,39 @@ Describe the real flow in the project file, for example:
 6. Response, with user feedback through the `notify` module (`docs/DESIGN.md`).
 
 Record where state lives (database, object storage, cache) as described in `docs/SCALING.md`.
+
+## Diagrams
+
+This file keeps two diagrams as Mermaid text, so they show up in git diffs, render on GitHub and cost an AI reader few tokens:
+
+- System: the users, the app's parts (web app, workers), the data stores and every outside service (auth provider, email, object storage, payments, analytics), with what crosses each arrow.
+- Main flow: a sequence diagram of the app's main task, from the browser through route, service and repository to the database and back, including the feedback the user sees.
+
+Each stays at about a dozen boxes: detail lives in the folder docs and the code map, and a diagram that shows every file goes stale. The database diagram is generated from the schema (`docs/DATABASE.md`), never drawn by hand. A change that adds or removes a part, a data store or an outside service, or changes the main flow, updates the diagrams in the same PR.
+
+### Draft before code (scaffold-time)
+
+The plan is approved together with a draft on one page (`templates/plan-preview.html`), before any code exists, because changing a draft takes minutes and changing built code can take days:
+
+- the two diagrams above;
+- the data model: entities, key fields and relationships as a Mermaid ER diagram, which checkpoint B turns into the first migration;
+- example payloads for the main actions, in the format of Planned actions below;
+- for apps with screens, the colors, the look and rough mockups of the main screens (`docs/DESIGN.md`).
+
+After approval, the diagrams go into this file and the payloads into Planned actions.
+
+## Planned actions
+
+The main actions approved in the draft and not built yet, one entry each: who may call it, the input, the success result and the error codes it can return. For example:
+
+```markdown
+### Create marker (signed-in users)
+- Input: `title` (1-80 characters), `lat`, `lng`, `photo` (optional image, at most 5 MB)
+- Success: `MarkerDTO` `{ id, title, lat, lng, photoUrl, createdAt }`
+- Errors: field errors for invalid input; `UPLOAD_TOO_LARGE`, `MARKER_QUOTA_EXCEEDED`
+```
+
+The feature that builds an action turns its entry into the validation schema, the DTO and the first tests, and deletes the entry in the same PR, so the schemas stay the only source of truth.
 
 ## Evolving the architecture
 
