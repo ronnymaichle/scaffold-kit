@@ -1,6 +1,6 @@
 # Design system, feedback and UI text
 
-Becomes `docs/DESIGN.md`. Keep what applies to the stack and profile; replace the scaffold-time sections with the decisions (source colors and rationale, styling approach, component base, toast library) and their reasons.
+Becomes `docs/DESIGN.md`. Keep what applies to the stack and profile; replace the scaffold-time sections with the decisions (source colors and rationale, the look, styling approach, component base, toast library) and their reasons.
 
 ## Colors: always ask (scaffold-time)
 
@@ -10,17 +10,39 @@ Never invent a palette silently. Offer three paths and wait for the answer:
 2. The user describes a mood or references: propose 2-3 themes.
 3. The user asks for a recommendation: propose 2-3 themes suited to the app's domain and audience, each with a one-line rationale.
 
-Generate each proposal with the kit's palette script, writing outside the project (proposals are for choosing, not for committing), and compare them on one page:
+Colors are chosen at the plan step, with the draft (`docs/ARCHITECTURE.md`). Generate each proposal with the kit's palette script into the draft folder outside the project (proposals are for choosing, not for committing), and compare them on one page:
 
 ```bash
-python3 scripts/quality/palette.py theme --primary "#2563eb" --out /tmp/theme-proposals/a.css
-python3 scripts/quality/palette.py theme --primary "#0f766e" --highlight "#f59e0b" --out /tmp/theme-proposals/b.css
-python3 scripts/quality/palette.py preview /tmp/theme-proposals/a.css /tmp/theme-proposals/b.css --out /tmp/theme-proposals/index.html
+DRAFT="${TMPDIR:-/tmp}/plan-preview"
+python3 "$KIT/scripts/quality/palette.py" theme --primary "#2563eb" --out "$DRAFT/themes/a.css"
+python3 "$KIT/scripts/quality/palette.py" theme --primary "#0f766e" --highlight "#f59e0b" --out "$DRAFT/themes/b.css"
+python3 "$KIT/scripts/quality/palette.py" preview "$DRAFT/themes/a.css" "$DRAFT/themes/b.css" --out "$DRAFT/themes/index.html"
 ```
 
-The preview shows each proposal in light and dark: swatches, buttons, inputs, a card, alerts, toasts and the contrast results. Show it to the user (open it in the browser, or send the file) and get approval before applying. The approved CSS becomes the theme file listed in `quality.config.json` (`design.themeFiles`).
+The palette preview shows each proposal in light and dark: swatches, buttons, inputs, a card, alerts, toasts and the contrast results. The draft page links to it, and its screen mockups switch between the proposals. Never apply a theme the user has not approved; the approved CSS becomes the theme file listed in `quality.config.json` (`design.themeFiles`).
 
 The script keeps a requested color exact wherever it passes contrast. When it cannot carry text in a role (for example a button background behind white text), the script derives the nearest accessible shade for that role and prints a note: keep the original as the `--highlight` color or an accent, and explain the change to the user.
+
+## Look (scaffold-time)
+
+Colors are only part of the look. Decide the rest with them, from the mood or references the user gave, so every screen looks like the same product instead of the component library's defaults. Recommend one option per item with a one-line reason, show it in the draft's screen mockups, and record the decisions and their reasons in a Look section of this file:
+
+- Font: one interface font (for example Inter or Geist), a serif for reading-heavy apps (for example Source Serif), or the system stack for the lightest pages.
+- Density: comfortable, the default for consumer apps, or compact for data-heavy tools; control heights and spacing steps follow it, and touch targets keep their minimums.
+- Corners: the `--radius` token. About 0.25rem looks sharp and technical, 0.5-0.75rem soft (the generated theme uses 0.625rem), 1rem or more friendly and rounded.
+- Motion: subtle (short fades and slides, the default) or minimal (state changes only), within the timing rule below.
+
+The decisions become tokens and defaults: `--radius` in the theme file, the font family in the styling framework's theme (Tailwind v4: `--font-sans` in `@theme`), and the density as the default size of the base components.
+
+## Screen mockups
+
+For apps with screens, the draft includes rough mockups of the two or three screens users spend the most time in, starting with the main task, so the user sees the product before any code exists (scaffold-time):
+
+- Plain HTML and CSS inside the draft page (`templates/plan-preview.html`), styled only with the theme's tokens, so the page's switches show every color proposal in light and dark. Layout uses container queries, so the page's width switch shows the phone and desktop layouts.
+- Real labels and realistic fake data; each screen's main state, plus the empty state of the screen a new user lands on.
+- They follow the UI and UX rules below and the component base's look, so the built screens can match them. Rough means no logic and no pixel polish, not grey boxes.
+
+After approval, `docs/mockups/` keeps the screens: the draft page with only its screens and the approved theme left, and that theme's CSS file next to it. When a screen is planned, the `designer` starts from its mockup. The feature that builds a screen deletes its mockup in the same PR, and the folder goes with the last one, because a mockup that no longer matches the app misleads more than it helps.
 
 ## Palette derivation
 
@@ -69,10 +91,22 @@ Verify current versions and maintenance with a web search.
 
 Default to Tailwind when the user knows it; plain CSS with custom properties if they prefer it or the project is very small. Copied-in component libraries become owned code, restyled through tokens only. One icon set across the app (for example Lucide).
 
+## Component composition
+
+The UI is built from small parts in three levels, each using only the levels below it:
+
+1. Base components from the component base (button, input, dialog): owned code, restyled through tokens only (for example `$lib/components/ui` with shadcn-svelte).
+2. App components that combine them into the app's own concepts (a marker card, a comment list), in the shared components folder.
+3. Screens: routes that put app components together with their data. Markup that repeats across screens becomes an app component on its third use (`docs/ARCHITECTURE.md`).
+
+- The module-boundary lint rule enforces the levels (`docs/ARCHITECTURE.md`): base components never import app components, and components never import routes.
+- Content goes in, not flags: when a component must show different content, the caller passes it in (Svelte snippets, React children, Vue slots). Style-only variants (size, tone) go through one variant helper (tailwind-variants with shadcn-svelte, cva with shadcn/ui). A component that needs more than about three boolean props to control its layout should be split, or take content instead.
+- Shared behaviour (pagination, search, form state, a media query) lives in one function or reactive module (Svelte `.svelte.ts` modules with runes, React hooks, Vue composables), never copied between components.
+
 ## UI and UX rules
 
 - Spacing on a 4px base scale, no arbitrary values; consistent radius and elevation tokens.
-- Typography: one variable font or the system stack; a fixed type scale; body text at least 16px with ~1.5 line height; line length 60-75 characters.
+- Typography: one variable font, self-hosted (a font CDN would receive every visitor's IP address), or the system stack; a fixed type scale; body text at least 16px with ~1.5 line height; line length 60-75 characters.
 - Mobile-first layouts; touch targets at least 44x44px for primary controls and never below 24x24px.
 - Buttons: one primary action per view, then secondary, ghost and destructive; verb labels; every state designed: hover, active, a visible `focus-visible` ring, disabled, and loading (spinner, disabled, width preserved).
 - Forms: visible labels (placeholders are not labels), correct input types and autocomplete, inline errors linked with `aria-describedby`, errors stated in text, server validation errors mapped back to their fields.
@@ -119,7 +153,7 @@ Rules:
 
 ## Lean profile
 
-One generated theme (from the user's color or one recommendation) and one preview round; light and dark both come from the script. The token, literal and contrast checks stay. The dev design page and i18n are skipped unless needed.
+One generated theme (from the user's color or one recommendation) and one preview round; light and dark both come from the script. The look gets one recommendation, and the draft mocks up the main screen only. The token, literal and contrast checks stay. The dev design page and i18n are skipped unless needed.
 
 ## Strict profile additions
 

@@ -56,6 +56,19 @@ class KitFileTests(unittest.TestCase):
         for command in ("folder_docs.py staged", "debug_leftovers.py --staged", "design_tokens.py literals --staged", "sources.py check"):
             self.assertIn(command, text)
 
+    def test_plan_preview_template_pins_its_scripts(self):
+        text = (KIT / "templates" / "plan-preview.html").read_text(encoding="utf-8")
+        for section in ("architecture", "data", "actions", "look", "screens"):
+            self.assertIn(f'<section id="{section}">', text)
+        urls = re.findall(r"https://cdn\.jsdelivr\.net/npm/[^\"'\s>]+", text)
+        self.assertTrue(urls, "the diagrams need a pinned Mermaid build")
+        for url in urls:
+            with self.subTest(url=url):
+                self.assertRegex(url, r"/npm/(@[\w.-]+/)?[\w.-]+@\d+\.\d+\.\d+/", "pin an exact version")
+        for placeholder in re.findall(r"\{\{[^{}]*\}\}", text):
+            with self.subTest(placeholder=placeholder):
+                self.assertRegex(placeholder, r"^\{\{(\.\.\.|[A-Z_]+(: [^{}]+)?)\}\}$")
+
 
 if __name__ == "__main__":
     unittest.main()
