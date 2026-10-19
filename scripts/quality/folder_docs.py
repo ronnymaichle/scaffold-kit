@@ -9,13 +9,17 @@ can find code from short indexes instead of reading whole files.
   staged            pre-commit: files added, removed or renamed need their folder
                     doc staged too; then check the touched folders
   init              create missing folder docs and append missing entries, marked
-                    TODO(describe); never removes or rewrites existing text
+                    TODO(describe), and write each file's Depends on line; never
+                    removes or rewrites other text
   codemap [--check] write docs/CODEMAP.md, or only verify it is current
+  deps FILE...      print what each file imports and what imports it
 
 Format rules the check relies on (see references/folder-docs.md in the kit):
   "Purpose: ..." line; "## Files" with one "### <file name or glob>" per file;
   symbol bullets start with a backticked name ("- `createMarker(db, input)` -> ...");
   "- Props: `a: T`, `b`" and "- Also exports: `X`, `Y`" bullets list several names;
+  "Depends on: `src/lib/db.ts`, `internal/store/`" lists the project files a file
+  imports (Go: package folders), by path from the project root; init writes it;
   "## Subfolders" bullets start with a backticked folder name ("- `uploads/`: ...").
 Configuration: the "folderDocs" section of quality.config.json.
 """
@@ -23,7 +27,9 @@ from __future__ import annotations
 
 import argparse
 import ast
+import json
 import os
+import posixpath
 import re
 import sys
 from pathlib import Path, PurePosixPath
@@ -55,6 +61,8 @@ class _Entry:
         self.has_description = False
         self.symbols = set()
         self.props = set()
+        self.depends = None  # items of the first Depends on line, in written order
+        self.depends_lines = []
 
 
 class _Doc:
@@ -108,10 +116,16 @@ def _parse_doc(text):
                 continue
             entry.end = idx
             b = _BULLET.match(line)
+            body = (b.group(1) if b else line).strip()
+            if body.lower().startswith("depends on:"):
+                entry.depends_lines.append(idx)
+                if entry.depends is None:
+                    rest = body[len("depends on:"):]
+                    entry.depends = _TICKS.findall(rest) or [t.strip() for t in rest.split(",") if t.strip()]
+                continue
             if not b:
                 entry.has_description = True
                 continue
-            body = b.group(1).strip()
             lower = body.lower()
             if lower.startswith("props:"):
                 for tick in _TICKS.findall(body):
@@ -370,6 +384,263 @@ def _symbols_for(path):
     return None, None, False
 
 
+# ------------------------------------------------------------ import extraction
+
+_IMPORT_FROM = re.compile(r"(?<![\w$.])(?:import|export)\b[^'\";]*?\bfrom\s*(['\"])([^'\"\n]+)\1")
+_IMPORT_BARE = re.compile(r"(?<![\w$.])import\s*(['\"])([^'\"\n]+)\1")
+_IMPORT_CALL = re.compile(r"(?<![\w$.])(?:import|require)\s*\(\s*(['\"])([^'\"\n]+)\1\s*\)")
+_SCRIPT_EXTS = {".svelte", ".vue", ".astro"}
+_IMPORT_EXTS = _JS_EXTS | _SCRIPT_EXTS | {".py", ".go"}
+_RESOLVE_EXTS = (".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs", ".svelte", ".vue", ".json")
+_EXT_SWAPS = {".js": (".ts", ".tsx"), ".jsx": (".tsx",), ".mjs": (".mts",), ".cjs": (".cts",)}
+
+
+def _js_import_specs(text):
+    """Specifiers of imports, re-exports, require() and import() calls in JS/TS code.
+
+    Statements are found in a copy with comments and strings blanked, so code
+    quoted in strings is ignored; each specifier is read back at the same
+    offsets from a copy that keeps the strings.
+    """
+    blank = common.strip_js_comments_and_strings(text)
+    kept = common.strip_js_comments_and_strings(text, keep_strings=True)
+    specs = []
+    for regex in (_IMPORT_FROM, _IMPORT_BARE, _IMPORT_CALL):
+        for m in regex.finditer(blank):
+            spec = kept[m.start(2):m.end(2)].strip()
+            if spec:
+                specs.append(spec)
+    return specs
+
+
+def _python_imports(text):
+    """(level, module, names) for every import statement in Python code."""
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError):
+        return []
+    found = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            found += [(0, alias.name, ()) for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            found.append((node.level or 0, node.module, tuple(a.name for a in node.names if a.name != "*")))
+    return found
+
+
+def _go_imports(text):
+    code = common.strip_js_comments_and_strings(text, keep_strings=True)
+    paths = []
+    for block in re.findall(r"^import\s*\((.*?)\)", code, re.M | re.S):
+        paths += re.findall(r"\"([^\"\n]+)\"", block)
+    paths += re.findall(r"^import\s+(?:[\w.]+\s+)?\"([^\"\n]+)\"", code, re.M)
+    return paths
+
+
+def _read_jsonc(path):
+    """JSON that may have comments and trailing commas, as tsconfig.json does; None if unreadable."""
+    text = common.read_text(path)
+    if text is None:
+        return None
+    code = common.strip_js_comments_and_strings(text, keep_strings=True)
+    try:
+        return json.loads(re.sub(r",(\s*[}\]])", r"\1", code))
+    except ValueError:
+        return None
+
+
+def _root_relative(path, root):
+    rel = os.path.relpath(os.path.normpath(str(path)), str(root)).replace(os.sep, "/")
+    return None if rel == ".." or rel.startswith("../") else rel
+
+
+def _ts_settings(path, root, depth=0):
+    """(baseUrl, paths) of a tsconfig file and the relative files it extends, as root-relative paths."""
+    data = _read_jsonc(path)
+    if not isinstance(data, dict):
+        return None, {}
+    base_url, paths = None, {}
+    extends = data.get("extends")
+    for parent in extends if isinstance(extends, list) else [extends]:
+        if isinstance(parent, str) and parent.startswith(".") and depth < 5:
+            target = path.parent / parent
+            if target.suffix != ".json":
+                target = target.with_name(target.name + ".json")
+            parent_base, parent_paths = _ts_settings(target, root, depth + 1)
+            base_url = parent_base if parent_base is not None else base_url
+            paths = parent_paths or paths
+    options = data.get("compilerOptions")
+    if not isinstance(options, dict):
+        return base_url, paths
+    if isinstance(options.get("baseUrl"), str):
+        base_url = _root_relative(path.parent / options["baseUrl"], root)
+    if isinstance(options.get("paths"), dict):
+        anchor = root / base_url if base_url is not None else path.parent
+        paths = {}
+        for pattern, targets in options["paths"].items():
+            if isinstance(targets, list):
+                rels = (_root_relative(anchor / t, root) for t in targets if isinstance(t, str))
+                paths[pattern] = [r for r in rels if r is not None]
+    return base_url, paths
+
+
+def _condition_target(value):
+    """The path a package.json "imports" entry points to, preferring runtime conditions over types."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return next((t for t in map(_condition_target, value) if t), None)
+    if isinstance(value, dict):
+        for key in ("import", "node", "default", "require", "types"):
+            if key in value:
+                return _condition_target(value[key])
+        return next((t for t in map(_condition_target, value.values()) if t), None)
+    return None
+
+
+def _subpath_imports(root):
+    """Node subpath imports ("#lib/*": "./src/lib/*") from package.json, as root-relative targets."""
+    package = _read_jsonc(root / "package.json")
+    entries = package.get("imports") if isinstance(package, dict) else None
+    found = {}
+    for key, value in (entries or {}).items() if isinstance(entries, dict) else ():
+        target = _condition_target(value)
+        rel = _root_relative(root / target, root) if key.startswith("#") and target else None
+        if rel:
+            found[key] = [rel]
+    return found
+
+
+def _prefix_length(alias):
+    return -len(alias[0].split("*")[0])
+
+
+class _Imports:
+    """Resolves the imports of source files to the project files they name."""
+
+    def __init__(self, project):
+        self.root = project.root
+        self.files = project.sources
+        self.dirs = {str(PurePosixPath(f).parent) for f in self.files}
+        self.base_url, ts_paths = None, {}
+        for name in ("tsconfig.json", "jsconfig.json"):
+            if (self.root / name).is_file():
+                self.base_url, ts_paths = _ts_settings(self.root / name, self.root)
+                break
+        configured = []
+        for alias, target in (project.cfg.get("aliases") or {}).items():
+            alias, target = alias.rstrip("/"), str(target).strip("/")
+            configured += [(alias, [target or "."]), (alias + "/*", [f"{target}/*" if target else "*"])]
+        known = list(ts_paths.items()) + list(_subpath_imports(self.root).items())
+        self.aliases = sorted(known, key=_prefix_length) + sorted(configured, key=_prefix_length)
+        m = re.search(r"^module\s+(\S+)", common.read_text(self.root / "go.mod") or "", re.M)
+        self.go_module = m.group(1) if m else None
+        self._cache = {}
+
+    def of(self, rel):
+        """Sorted project files (Go: package folders ending in /) that the file rel imports."""
+        if rel not in self._cache:
+            self._cache[rel] = sorted(self._targets(rel) - {rel})
+        return self._cache[rel]
+
+    def _targets(self, rel):
+        text = common.read_text(self.root / rel)
+        if text is None:
+            return set()
+        ext = PurePosixPath(rel).suffix.lower()
+        folder = str(PurePosixPath(rel).parent)
+        folder = "" if folder == "." else folder
+        if ext == ".py":
+            return {t for imp in _python_imports(text) for t in self._python(folder, *imp)}
+        if ext == ".go":
+            return {t for t in map(self._go, _go_imports(text)) if t}
+        if ext in _JS_EXTS:
+            specs = _js_import_specs(text)
+        elif ext in _SCRIPT_EXTS:
+            specs = [s for _attrs, body, _start in common.extract_script_blocks(text) for s in _js_import_specs(body)]
+        else:
+            return set()
+        return {t for t in (self._js(folder, spec) for spec in specs) if t}
+
+    def _js(self, folder, spec):
+        spec = spec.split("?")[0]
+        if spec in (".", "..") or spec.startswith(("./", "../")):
+            bases = [posixpath.join(folder, spec)]
+        else:
+            bases = self._alias_bases(spec)
+        for base in bases:
+            hit = self._js_file(posixpath.normpath(base))
+            if hit:
+                return hit
+        return None
+
+    def _alias_bases(self, spec):
+        bases = []
+        for pattern, targets in self.aliases:
+            prefix, star, suffix = pattern.partition("*")
+            if star and spec.startswith(prefix) and spec.endswith(suffix) and len(spec) >= len(prefix) + len(suffix):
+                middle = spec[len(prefix):len(spec) - len(suffix)]
+                bases += [t.replace("*", middle, 1) for t in targets]
+            elif not star and spec == pattern:
+                bases += targets
+        if not bases and self.base_url is not None:
+            bases.append(posixpath.join(self.base_url, spec))
+        return bases
+
+    def _js_file(self, base):
+        if base in self.files:
+            return base
+        stem, ext = posixpath.splitext(base)
+        for swap in _EXT_SWAPS.get(ext, ()):
+            if stem + swap in self.files:
+                return stem + swap
+        candidates = [base + e for e in _RESOLVE_EXTS] + [posixpath.join(base, "index" + e) for e in _RESOLVE_EXTS]
+        for candidate in candidates:
+            candidate = posixpath.normpath(candidate)
+            if candidate in self.files:
+                return candidate
+        return None
+
+    def _python(self, folder, level, module, names):
+        """Files a Python import names: the submodules of `from x import y`, otherwise the module.
+
+        Absolute imports are looked up from the project root, then `src/`, then the
+        file's own folder (a script's folder is first on sys.path).
+        """
+        path = module.replace(".", "/") if module else ""
+        if level:
+            parts = folder.split("/") if folder else []
+            if level - 1 > len(parts):
+                return []
+            package = "/".join(parts[:len(parts) - level + 1])
+            bases = [posixpath.join(package, path) if package else path]
+        elif path:
+            bases = [path, posixpath.join("src", path)] + ([posixpath.join(folder, path)] if folder else [])
+        else:
+            return []
+        for base in bases:
+            found = [s for s in (self._py_module(posixpath.join(base, n) if base else n) for n in names) if s]
+            if len(found) < len(names) or not names:
+                own = self._py_module(base) if base else None
+                if own:
+                    found.append(own)
+            if found:
+                return found
+        return []
+
+    def _py_module(self, base):
+        for candidate in (base + ".py", base + "/__init__.py"):
+            if candidate in self.files:
+                return candidate
+        return None
+
+    def _go(self, path):
+        if not self.go_module or not path.startswith(self.go_module + "/"):
+            return None
+        folder = path[len(self.go_module) + 1:]
+        return folder + "/" if folder in self.dirs else None
+
+
 # ------------------------------------------------------------- project model
 
 
@@ -380,10 +651,19 @@ class _Project:
         self.doc_name = self.cfg["docFile"]
         exts = set(self.cfg["extensions"])
         self.files = {}  # folder -> [file names]
+        self.sources = set()  # every documentable file, including those at the root
         self.all_dirs = set()
+        self._imports = None
         for rel in common.list_project_files(root):
             p = PurePosixPath(rel)
+            documentable = (
+                p.name != self.doc_name
+                and p.suffix.lower() in exts
+                and not common.any_glob_match(p.name, self.cfg["ignoreFiles"])
+            )
             if len(p.parts) < 2:
+                if documentable:
+                    self.sources.add(p.as_posix())
                 continue
             folder = str(p.parent)
             if common.is_excluded(folder, self.cfg["exclude"], self.cfg.get("excludeHidden", True)):
@@ -391,10 +671,9 @@ class _Project:
             parts = folder.split("/")
             for i in range(1, len(parts) + 1):
                 self.all_dirs.add("/".join(parts[:i]))
-            if p.name == self.doc_name or p.suffix.lower() not in exts:
+            if not documentable:
                 continue
-            if common.any_glob_match(p.name, self.cfg["ignoreFiles"]):
-                continue
+            self.sources.add(p.as_posix())
             self.files.setdefault(folder, []).append(p.name)
         needed = set()
         for folder in self.files:
@@ -426,9 +705,39 @@ class _Project:
     def symbol_checked(self, name):
         return self.cfg.get("symbolCheck", True) and not common.any_glob_match(name, self.cfg["symbolCheckSkip"])
 
+    def depends_checked(self, name):
+        return (
+            self.cfg.get("dependsCheck", True)
+            and not _is_glob(name)
+            and PurePosixPath(name).suffix.lower() in _IMPORT_EXTS
+            and not common.any_glob_match(name, self.cfg["symbolCheckSkip"])
+        )
+
+    @property
+    def imports(self):
+        if self._imports is None:
+            self._imports = _Imports(self)
+        return self._imports
+
 
 def _is_glob(name):
     return any(ch in _GLOB_CHARS for ch in name)
+
+
+def _depends_line(targets):
+    return "Depends on: " + ", ".join(f"`{t}`" for t in targets)
+
+
+def _depends_errors(project, folder, name, entry, doc_rel):
+    if not project.depends_checked(name):
+        return []
+    expected = project.imports.of(f"{folder}/{name}")
+    if expected and (entry.depends != expected or len(entry.depends_lines) != 1):
+        items = ", ".join(f"`{t}`" for t in expected)
+        return [f"{doc_rel}: {name}: Depends on should be {items} (run folder_docs.py init)"]
+    if not expected and entry.depends_lines:
+        return [f"{doc_rel}: {name}: imports no project files, so it needs no Depends on line (run folder_docs.py init)"]
+    return []
 
 
 def _check_folder(project, folder):
@@ -461,7 +770,10 @@ def _check_folder(project, folder):
             continue
         if not entry.has_description:
             errors.append(f"{doc_rel}: entry '{name}' has no description")
-        if name not in actual or not project.symbol_checked(name):
+        if name not in actual:
+            continue
+        errors += _depends_errors(project, folder, name, entry, doc_rel)
+        if not project.symbol_checked(name):
             continue
         symbols, props, wildcard = _symbols_for(file_path)
         if symbols is not None:
@@ -539,6 +851,19 @@ def _entry_lines(project, folder, name, existing=None):
     return lines
 
 
+def _wanted_depends(project, folder, name):
+    """The Depends on line a file needs, "" when it needs none, None when the file is not checked."""
+    if not project.depends_checked(name):
+        return None
+    targets = project.imports.of(f"{folder}/{name}")
+    return _depends_line(targets) if targets else ""
+
+
+def _new_entry_lines(project, folder, name):
+    wanted = _wanted_depends(project, folder, name)
+    return _entry_lines(project, folder, name) + ([wanted] if wanted else [])
+
+
 def _init_folder(project, folder):
     path = project.doc_path(folder)
     actual = sorted(project.files.get(folder, []))
@@ -548,7 +873,7 @@ def _init_folder(project, folder):
         if actual:
             lines += ["## Files", ""]
             for name in actual:
-                lines += _entry_lines(project, folder, name) + [""]
+                lines += _new_entry_lines(project, folder, name) + [""]
         if children:
             lines += ["## Subfolders", ""]
             lines += [f"- `{child}/`: {_TODO} purpose" for child in children]
@@ -560,33 +885,51 @@ def _init_folder(project, folder):
     text = common.read_text(path) or ""
     doc = _parse_doc(text)
     lines = list(doc.lines)
-    inserts = []  # (line index to insert after, [lines])
+    # (line index, kind, lines): "after" inserts after that line; "set" replaces it, or deletes it when empty
+    edits = []
     globs = [n for n in doc.files if _is_glob(n)]
     for name, entry in doc.files.items():
-        if name in actual:
-            extra = _entry_lines(project, folder, name, existing=entry)
-            if extra:
-                inserts.append((entry.end, extra))
+        if name not in actual:
+            continue
+        extra = _entry_lines(project, folder, name, existing=entry)
+        wanted = _wanted_depends(project, folder, name)
+        if not entry.depends_lines:
+            block = extra + ([wanted] if wanted else [])
+            if block:
+                edits.append((entry.end, "after", block))
+            continue
+        first = entry.depends_lines[0]
+        if extra:
+            edits.append((first - 1, "after", extra))  # new bullets go before the Depends on line
+        if wanted is None:
+            continue
+        if lines[first] != wanted:
+            edits.append((first, "set", [wanted] if wanted else []))
+        edits += [(dup, "set", []) for dup in entry.depends_lines[1:]]
     new_entries = []
     for name in actual:
         if name not in doc.files and not any(common.glob_match(name, g) for g in globs):
-            new_entries += [""] + _entry_lines(project, folder, name)
+            new_entries += [""] + _new_entry_lines(project, folder, name)
     if new_entries:
         if "files" in doc.sections:
-            inserts.append((doc.sections["files"][1], new_entries))
+            edits.append((doc.sections["files"][1], "after", new_entries))
         else:
-            inserts.append((len(lines) - 1, ["", "## Files"] + new_entries))
+            edits.append((len(lines) - 1, "after", ["", "## Files"] + new_entries))
     missing_children = [c for c in children if c not in doc.subfolders]
     if missing_children:
         bullets = [f"- `{child}/`: {_TODO} purpose" for child in missing_children]
         if "subfolders" in doc.sections:
-            inserts.append((doc.sections["subfolders"][1], bullets))
+            edits.append((doc.sections["subfolders"][1], "after", bullets))
         else:
-            inserts.append((len(lines) - 1, ["", "## Subfolders", ""] + bullets))
-    if not inserts:
+            edits.append((len(lines) - 1, "after", ["", "## Subfolders", ""] + bullets))
+    if not edits:
         return None
-    for after, block in sorted(inserts, key=lambda item: item[0], reverse=True):
-        lines[after + 1:after + 1] = block
+    # Bottom-up, so earlier indexes stay valid; at the same index, insert after a line before replacing it.
+    for index, kind, block in sorted(edits, key=lambda e: (e[0], e[1] == "after"), reverse=True):
+        if kind == "after":
+            lines[index + 1:index + 1] = block
+        else:
+            lines[index:index + 1] = block
     path.write_text("\n".join(lines).rstrip("\n") + "\n", encoding="utf-8")
     return "updated"
 
@@ -660,6 +1003,41 @@ def _cmd_staged(project):
     return errors, warnings, touched
 
 
+def _project_rel(root, arg):
+    path = Path(arg)
+    if path.is_absolute():
+        try:
+            return path.resolve().relative_to(root).as_posix()
+        except ValueError:
+            return arg
+    return posixpath.normpath(arg.replace(os.sep, "/"))
+
+
+def _cmd_deps(project, paths):
+    """Print what each file imports and which project files import it (Go: its package)."""
+    graph = {
+        rel: project.imports.of(rel)
+        for rel in sorted(project.sources)
+        if PurePosixPath(rel).suffix.lower() in _IMPORT_EXTS
+    }
+    blocks, errors = [], []
+    for arg in paths:
+        rel = _project_rel(project.root, arg)
+        if rel not in project.sources:
+            errors.append(f"{arg}: not a source file of this project")
+            continue
+        package = f"{PurePosixPath(rel).parent.as_posix()}/" if rel.endswith(".go") else None
+        importers = sorted(f for f, deps in graph.items() if f != rel and (rel in deps or package in deps))
+        targets = graph.get(rel, [])
+        block = [rel]
+        block += (["  imports:"] + [f"    {t}" for t in targets]) if targets else ["  imports: none"]
+        block += (["  imported by:"] + [f"    {f}" for f in importers]) if importers else ["  imported by: none"]
+        blocks.append("\n".join(block))
+    if blocks:
+        print("\n\n".join(blocks))
+    return common.report(errors) if errors else 0
+
+
 def main(argv=None):
     """Command-line entry point; returns the process exit code."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -668,9 +1046,11 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("check", help="verify all folder docs and the code map")
     sub.add_parser("staged", help="pre-commit check of staged changes")
-    sub.add_parser("init", help="create or extend folder docs with TODO(describe) entries")
+    sub.add_parser("init", help="create or extend folder docs with TODO(describe) entries and Depends on lines")
     cm = sub.add_parser("codemap", help="write the code map")
     cm.add_argument("--check", action="store_true", help="only verify that the code map is current")
+    dp = sub.add_parser("deps", help="print what files import and what imports them")
+    dp.add_argument("files", nargs="+", help="paths from the project root")
     args = parser.parse_args(argv)
     root = Path(args.root).resolve()
     project = _Project(root, common.load_config(root, args.config))
@@ -704,6 +1084,8 @@ def main(argv=None):
         target.write_text(_codemap_text(project), encoding="utf-8")
         print(f"wrote {project.cfg['codemapFile']}")
         return 0
+    if args.command == "deps":
+        return _cmd_deps(project, args.files)
     return 2
 
 

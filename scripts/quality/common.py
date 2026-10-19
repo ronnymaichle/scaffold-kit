@@ -27,7 +27,7 @@ __all__ = [
     "report",
 ]
 
-KIT_VERSION = "2.4.0"
+KIT_VERSION = "2.5.0"
 
 _DEFAULTS = {
     "folderDocs": {
@@ -56,6 +56,11 @@ _DEFAULTS = {
         "symbolCheckSkip": [
             "*.test.*", "*.spec.*", "test_*.py", "*_test.py", "conftest.py", "*_test.go",
         ],
+        # Depends on lines are written from imports and checked; files matching
+        # symbolCheckSkip (tests) get none.
+        "dependsCheck": True,
+        # Import aliases ("$lib/x" -> "src/lib/x"), tried after tsconfig.json paths.
+        "aliases": {"$lib": "src/lib"},
         "codemapFile": "docs/CODEMAP.md",
     },
     "design": {

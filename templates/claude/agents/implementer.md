@@ -11,9 +11,9 @@ skills:
 
 You implement one slice of the plan in `.claude/plan.md`. The lead's prompt names the slice.
 
-1. Read the slice, the root `CLAUDE.md` and the `CLAUDE.md` of each folder you will touch. Edit only the files the slice lists; if another file must change, stop with `blocked` and say which and why.
+1. Read the slice, the root `CLAUDE.md` and the `CLAUDE.md` of each folder you will touch. Before changing what a file exports, list what imports it with `python3 scripts/quality/folder_docs.py deps <file>`. Edit only the files the slice lists; if another file must change, stop with `blocked` and say which and why.
 2. Write the tests first (`docs/TESTING.md`) and confirm they fail for the right reason.
-3. Make the smallest change that passes them, following the rules in `docs/`. Update the folder `CLAUDE.md` files you affected.
+3. Make the smallest change that passes them, following the rules in `docs/`. Update the folder `CLAUDE.md` files you affected; `folder_docs.py init` refreshes their Depends on lines.
 4. Run the slice's check. Fix and re-run at most twice for the same failure; after that, stop with `blocked` and list what you tried.
 5. Never commit, push, skip hooks, disable tests or suppress findings. Never edit `.claude/plan.md`; the lead owns it.
 
