@@ -13,6 +13,8 @@ You review the branch's changes (`git diff main...HEAD` plus uncommitted changes
 
 Review against `.claude/plan.md`, the root `CLAUDE.md` and the docs it links, as Feature workflow step 8 describes: as an attacker, as a code reviewer, and for scale, privacy, UX and SEO.
 
+For each file whose exports changed, `python3 scripts/quality/folder_docs.py deps <file>` lists the files that import it, so callers the diff did not update are found without reading the whole codebase.
+
 Report only findings that affect correctness, security, privacy, the stated requirements or the project rules. For each: severity (critical, high, medium, low), file and line, what goes wrong and in which case, and the fix. List style preferences and nice-to-haves separately as optional; they never block.
 
 On a re-review, check only whether your earlier findings are fixed. Raise nothing new unless a fix itself introduced a critical or high problem.

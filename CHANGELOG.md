@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.5.0 (2026-10-19)
+
+- Linked files in the folder docs: `folder_docs.py` reads each file's imports and writes its `Depends on:` line, listing the project files it imports by path from the project root (for Go, the package folders). `init` writes and refreshes the lines, and `check`, and so the pre-commit hook, fails when one no longer matches the code, so which files are connected can be trusted without opening them. Test files and glob entries get none; `folderDocs.dependsCheck: false` turns the check off.
+- Imports resolve through relative paths, `tsconfig.json` or `jsconfig.json` paths (following relative `extends`), Node subpath imports in `package.json` (`#lib/*`), the new `folderDocs.aliases` setting (default `$lib` to `src/lib`), Python packages at the root, in `src/` or next to the file, and the module path in `go.mod`. Packages from outside the project are left out.
+- New command `folder_docs.py deps FILE...`: what each file imports and what imports it, tests included, read from the code each time. The root `CLAUDE.md` template (Commands, Finding code, Feature step 4) and the `implementer`, `reviewer` and `debugger` agents use it before changing what a file exports.
+- `references/folder-docs.md` documents the line, the command and what the check verifies, and its example carries a generated line; the vendored `scripts/quality/CLAUDE.md` has its own lines. New tests in `tests/test_folder_docs_depends.py`.
+- Projects: in upgrade mode, replace `scripts/quality/`, run `python3 scripts/quality/folder_docs.py init` (it also rewrites handwritten Depends on lines into the checked format), review and commit the folder docs, and add `folderDocs.aliases` for any import alias defined outside `tsconfig.json` and `package.json` (for example Vite's `resolve.alias`); update the root `CLAUDE.md` lines and `.claude/agents/` (`implementer`, `reviewer`, `debugger`).
+
 ## 2.4.0 (2026-10-19)
 
 - Draft before code: the plan step ends with a draft the user approves before any code exists, on one page from the new template `templates/plan-preview.html` (a pinned Mermaid build, and switches for the color proposals, light and dark, and phone and desktop width). It shows the system and main-flow diagrams, the data model and example payloads for the main actions (`references/architecture.md`), and, for apps with screens, the color proposals, the look and rough mockups of the main screens (`references/design.md`). The lean profile drafts the system diagram, the data model and the main screen only. Colors are now chosen at this step instead of in checkpoint C.

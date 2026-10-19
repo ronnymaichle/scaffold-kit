@@ -36,12 +36,14 @@ Color parsing (hex, rgb, hsl, oklch, oklab, named), sRGB and OKLCH conversion, g
 - `contrast_ratio(a, b)` -> `float`: WCAG 2 contrast ratio, 1 to 21
 
 ### folder_docs.py
-Checks that every folder doc lists its files, exported symbols, component props and subfolders; creates skeleton docs; writes the code map.
-- `main(argv=None)` -> `int`: commands `check`, `staged`, `init`, `codemap [--check]`; exit 0 when clean, 1 when problems are found, 2 on usage errors
+Checks that every folder doc lists its files, exported symbols, component props, imports (Depends on) and subfolders; creates skeleton docs and writes the Depends on lines; writes the code map; prints what a file imports and what imports it.
+- `main(argv=None)` -> `int`: commands `check`, `staged`, `init`, `codemap [--check]`, `deps FILE...`; exit 0 when clean, 1 when problems are found, 2 on usage errors
+Depends on: `scripts/quality/common.py`
 
 ### debug_leftovers.py
 Finds DEBUG-TEMP lines, `debugger` statements and Python breakpoints in code (not in Markdown).
 - `main(argv=None)` -> `int`: `[--staged]`; exit 1 when anything is found
+Depends on: `scripts/quality/common.py`
 
 ### design_tokens.py
 Flags color literals and raw Tailwind palette classes outside the theme files, and checks WCAG AA contrast of token pairs in the light and dark theme.
@@ -51,6 +53,7 @@ Flags color literals and raw Tailwind palette classes outside the theme files, a
 - `parse_theme_files(paths, dark_selectors=None)` -> `dict`: {"light": {...}, "dark": {...}} with dark falling back to light
 - `resolve_value(value, env, depth=0)` -> `str | None`: substitutes var() references, honouring fallbacks
 - `evaluate_contrast(themes, pairs=None)` -> `list[dict]`: one result per theme and pair with ratio and status pass, fail, skip or missing
+Depends on: `scripts/quality/colors.py`, `scripts/quality/common.py`
 
 ### palette.py
 Generates OKLCH scales and complete light and dark token themes that pass the contrast pairs, and HTML previews comparing proposals.
@@ -58,6 +61,7 @@ Generates OKLCH scales and complete light and dark token themes that pass the co
 - `build_scale(hue, peak, brand=None, lightness=None)` -> `list[tuple]`: (step, (L, C, H)) for steps 50 to 950
 - `build_theme(primary, highlight=None, tailwind=True)` -> `tuple[str, list[str]]`: theme CSS and notes; raises RuntimeError if a pair would fail
 - `build_preview(paths, title="Theme proposals")` -> `str`: standalone HTML page
+Depends on: `scripts/quality/colors.py`, `scripts/quality/common.py`, `scripts/quality/design_tokens.py`
 
 ### sources.py
 Keeps Claude Code's WebFetch allow rules in `.claude/settings.json` in step with the https links in `docs/SOURCES.md`, never pre-approving wildcards or hosts where anyone can publish.
@@ -65,6 +69,7 @@ Keeps Claude Code's WebFetch allow rules in `.claude/settings.json` in step with
 - `linked_domains(text)` -> `tuple[list, list]`: sorted https hosts, and (line, url) for every http link
 - `preapproved(hosts, never)` -> `list[str]`: the hosts that get an allow rule
 - `review_warning(text, today, max_days)` -> `str | None`: a warning when the "Last reviewed:" date is missing or too old
+Depends on: `scripts/quality/common.py`
 
 ## Conventions
 - Each script runs on its own (`python3 scripts/quality/<script>.py --help`) and imports only these modules and the standard library.
@@ -73,3 +78,4 @@ Keeps Claude Code's WebFetch allow rules in `.claude/settings.json` in step with
 ## Gotchas
 - Export detection for JS and TS is pattern-based; `export * from` disables the stale-symbol check for that file, and regex literals are not parsed.
 - Svelte props are read from `$props()` destructuring (Svelte 5) or `export let` (Svelte 4); `let props = $props()` cannot be checked.
+- Imports resolve through relative paths, `tsconfig.json` or `jsconfig.json` paths (following relative `extends`), `folderDocs.aliases`, Python packages at the root, in `src/` or next to the file, and the module path in the root `go.mod`. An alias defined only elsewhere (for example Vite's `resolve.alias`) needs an entry in `folderDocs.aliases`, or its imports are left out.

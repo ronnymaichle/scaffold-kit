@@ -37,8 +37,9 @@ Run from the project root (or pass `--root <project>`). Each exits non-zero on p
 |---|---|
 | `python3 scripts/quality/folder_docs.py check` | Every folder has an up-to-date `CLAUDE.md`, and `docs/CODEMAP.md` is current |
 | `python3 scripts/quality/folder_docs.py staged` | Pre-commit: added, removed or renamed files need their folder doc staged |
-| `python3 scripts/quality/folder_docs.py init` | Create missing folder docs and append missing entries marked `TODO(describe)` |
+| `python3 scripts/quality/folder_docs.py init` | Create missing folder docs, append missing entries marked `TODO(describe)`, and write each file's `Depends on:` line from its imports |
 | `python3 scripts/quality/folder_docs.py codemap` | Regenerate `docs/CODEMAP.md` |
+| `python3 scripts/quality/folder_docs.py deps FILE...` | What each file imports and what imports it, tests included |
 | `python3 scripts/quality/debug_leftovers.py [--staged]` | No temporary debug markers, `debugger` or `breakpoint()` left in code |
 | `python3 scripts/quality/design_tokens.py literals [--staged]` | No color literals or raw palette classes outside the theme files |
 | `python3 scripts/quality/design_tokens.py contrast [--json]` | WCAG AA contrast for every token pair, light and dark |

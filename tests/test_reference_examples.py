@@ -15,8 +15,13 @@ def first_markdown_block(path):
     return m.group(1)
 
 
-def parent_doc(folder, child):
-    return f"# {folder}\n\nPurpose: Parent folder.\n\n## Subfolders\n\n- `{child}/`: child folder\n"
+def parent_doc(folder, *children):
+    bullets = "".join(f"- `{child}/`: child folder\n" for child in children)
+    return f"# {folder}\n\nPurpose: Parent folder.\n\n## Subfolders\n\n{bullets}"
+
+
+def leaf_doc(folder, name, symbol):
+    return f"# {folder}\n\nPurpose: Example dependency.\n\n## Files\n\n### {name}\nUsed by the example.\n- `{symbol}` the value\n"
 
 
 class FolderDocsExampleTests(unittest.TestCase):
@@ -25,6 +30,8 @@ class FolderDocsExampleTests(unittest.TestCase):
         files = {
             "src/lib/server/services/CLAUDE.md": example,
             "src/lib/server/services/markers.ts": (
+                "import { insertMarker } from '$lib/server/repositories/markers';\n"
+                "import { markerSchema } from '../../schemas/marker';\n"
                 "export async function getMarkersInBbox(db, bbox, limit) { return []; }\n"
                 "export async function createMarker(db, user, input) { return input; }\n"
                 "export type MarkerInput = { title: string };\n"
@@ -36,9 +43,13 @@ class FolderDocsExampleTests(unittest.TestCase):
                 "# src/lib/server/services/uploads\n\nPurpose: Presigned uploads.\n\n## Files\n\n"
                 "### presign.ts\nPresigned upload URLs.\n- `presign()` -> `string`: a short-lived upload URL\n"
             ),
+            "src/lib/server/repositories/markers.ts": "export function insertMarker() {}\n",
+            "src/lib/server/repositories/CLAUDE.md": leaf_doc("src/lib/server/repositories", "markers.ts", "insertMarker"),
+            "src/lib/schemas/marker.ts": "export const markerSchema = {};\n",
+            "src/lib/schemas/CLAUDE.md": leaf_doc("src/lib/schemas", "marker.ts", "markerSchema"),
             "src/CLAUDE.md": parent_doc("src", "lib"),
-            "src/lib/CLAUDE.md": parent_doc("src/lib", "server"),
-            "src/lib/server/CLAUDE.md": parent_doc("src/lib/server", "services"),
+            "src/lib/CLAUDE.md": parent_doc("src/lib", "schemas", "server"),
+            "src/lib/server/CLAUDE.md": parent_doc("src/lib/server", "repositories", "services"),
             "quality.config.json": '{"folderDocs": {"codemapFile": null}}',
         }
         with TempProject(files) as p:
