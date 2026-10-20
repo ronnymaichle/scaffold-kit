@@ -20,7 +20,9 @@ Becomes `docs/TESTING.md`. Tests are written first (Feature workflow, step 6); `
 - Services can be unit tested with a fake repository for their business rules, but every repository function and query runs against the real test database in integration tests. Never mock the database there: a mocked query proves nothing about the SQL.
 - Determinism: no real network (unexpected outbound requests fail the test), no sleeps (wait for a condition instead), fixed seeds for fake data, time zone set to UTC, and tests that pass in any order and in parallel.
 - Test data comes from factories with sensible defaults (`makeUser({ role: 'admin' })`), not from shared fixture files.
-- Required cases: every business rule; every error code; every access rule with negative tests (unauthenticated, wrong user, wrong role); invalid and oversized input; rate limits.
+- Required cases: every business rule; every error code; every access rule with negative tests (unauthenticated, wrong user, wrong role); invalid and oversized input; rate limits, quotas, breakers and security event thresholds (`docs/security/SAFEGUARDS.md`).
+- Permission matrix: a test generated from the permission catalog states, for every role (including `anonymous`) and every permission, whether it is allowed; a role or permission without an expected answer fails it.
+- Route coverage: a test lists every server entry point from the framework's routes (pages with server data, endpoints, form actions, Server Actions, remote functions) and fails when one is missing from the route access list (each entry point's required permission, or `public`). Integration tests call each entry point as every role and expect the matrix's answer.
 - Every bug fix and security fix gets a regression test that fails before the fix.
 - Property-based tests (fast-check, Hypothesis) suit parsers and money, date and geometry calculations.
 - Snapshot tests only for small, stable serialized output, never for whole pages or components.

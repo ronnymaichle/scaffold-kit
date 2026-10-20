@@ -33,8 +33,8 @@ Verify current versions and maintenance status with a web search before recommen
 
 Describe the real flow in the project file, for example:
 
-1. Server hook: request id, session, security headers, rate limits.
-2. Route: validate input with the schema, check authorization.
+1. Server hook: request id, session, security headers, rate limits and route breakers.
+2. Route: validate input with the schema, check the permission through the guard (`docs/security/SAFEGUARDS.md`).
 3. Service: business rules; throws catalogued errors.
 4. Repository: parameterized queries; returns rows.
 5. Service or repository maps rows to DTOs; only DTOs reach the client.

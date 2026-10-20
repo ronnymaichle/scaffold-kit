@@ -20,6 +20,17 @@ class KitFileTests(unittest.TestCase):
                 if path.name != "upgrade.md":
                     self.assertIn("Becomes", head)
 
+    def test_scaffold_progress_creates_every_doc_a_reference_becomes(self):
+        progress = (KIT / "templates" / "SCAFFOLD-PROGRESS.md").read_text(encoding="utf-8")
+        for path in sorted((KIT / "references").glob("*.md")):
+            if path.name == "upgrade.md":
+                continue
+            match = re.search(r"Becomes(.*?)(?:\.\s|\.$)", path.read_text(encoding="utf-8"), re.S)
+            self.assertIsNotNone(match, path.name)
+            for doc in re.findall(r"`(docs/[\w/.-]+\.md)`", match.group(1)):
+                with self.subTest(reference=path.name, doc=doc):
+                    self.assertTrue(f"`{doc}`" in progress, f"{doc} is in no scaffold checkpoint, so a new project never gets it")
+
     def test_root_template_stays_short_and_has_the_workflows(self):
         text = (KIT / "templates" / "CLAUDE.md").read_text(encoding="utf-8")
         self.assertLess(len(text.splitlines()), 200, "leave room for project-specific lines (limit ~300)")
@@ -30,7 +41,7 @@ class KitFileTests(unittest.TestCase):
 
     def test_links_to_project_docs_are_consistent(self):
         known = {
-            "docs/ARCHITECTURE.md", "docs/DATABASE.md", "docs/security/THREAT-MODEL.md",
+            "docs/ARCHITECTURE.md", "docs/DATABASE.md", "docs/security/THREAT-MODEL.md", "docs/security/SAFEGUARDS.md",
             "docs/security/findings.md", "docs/PRIVACY.md", "docs/DEPLOYMENT.md", "docs/SCALING.md",
             "docs/OPERATIONS.md", "docs/DESIGN.md", "docs/SEO.md", "docs/ANALYTICS.md",
             "docs/LOGGING.md", "docs/TESTING.md", "docs/SOURCES.md", "docs/CODEMAP.md", "docs/LAUNCH-CHECKLIST.md",

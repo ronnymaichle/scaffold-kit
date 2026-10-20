@@ -21,7 +21,7 @@ Becomes `docs/LOGGING.md`. Goal: in production, any error can be traced from wha
 
 - The logger configuration redacts passwords, tokens, cookies, authorization headers, API keys and emails; a test asserts the redaction.
 - Log ids, not personal data; log raw user-supplied content only as far as debugging needs, because log readers (people and agents) treat it as untrusted (`docs/OPERATIONS.md`).
-- Security events are logged at `warn` or above: failed logins, authorization denials, rate-limit hits, failed bot challenges, rejected webhook signatures, rejected uploads and validation rejections on sensitive endpoints.
+- Security events are logged at `warn` or above: failed logins, authorization denials, rate-limit hits, failed bot challenges, rejected webhook signatures, rejected uploads and validation rejections on sensitive endpoints. Each is an entry in the security event catalog, with its severity, automatic response and alert (`docs/security/SAFEGUARDS.md`), and is also written to the audit log (`docs/security/THREAT-MODEL.md`).
 
 ## Errors
 
@@ -45,5 +45,4 @@ Self-hosted GlitchTip (Sentry-compatible) or hosted Sentry through the framework
 
 ## Strict profile additions
 
-- Security events also go to the append-only audit log (`docs/security/THREAT-MODEL.md`), separate from application logs and kept for the defined retention period.
 - Log retention and access are defined in `docs/PRIVACY.md`, and access to production logs is itself logged.

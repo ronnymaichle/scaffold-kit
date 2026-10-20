@@ -8,7 +8,7 @@
 
 ## Security and privacy
 
-<!-- Inputs, access rules, personal data touched; threat-model risks and how they are handled; trusted sources checked, with dates (docs/SOURCES.md). "None" if nothing applies. -->
+<!-- Inputs, access rules, personal data touched; new entry points, permissions, limits, quotas and breakers (docs/security/SAFEGUARDS.md); threat-model risks and how they are handled; trusted sources checked, with dates (docs/SOURCES.md). "None" if nothing applies. -->
 
 ## Scalability
 

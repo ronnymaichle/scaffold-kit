@@ -37,12 +37,12 @@ If the user points to a local copy of the kit, use that instead. If the kit cann
 
 Ask in one round for whatever is missing, offering options with a recommendation where the user may not know the answer:
 
-- The idea: what the app does (2-3 sentences), its core entities, who the users are, which of their data is personal (accounts, locations, photos), the minimum user age, whether users publish content others see, and whether the app takes payments.
+- The idea: what the app does (2-3 sentences), its core entities, who the users are, which of their data is personal (accounts, locations, photos), the minimum user age, whether users publish content others see, whether the app takes payments, and which features call paid services (AI, SMS, maps, image processing).
 - The stack, if the user has one; languages and tools they already know, including styling tools such as Tailwind.
-- Data and auth: databases or platforms they know or prefer (Firebase, Supabase, MongoDB, Postgres), whether free tiers and self-hosting matter, sign-in methods (email, social, passkeys) and roles.
+- Data and auth: databases or platforms they know or prefer (Firebase, Supabase, MongoDB, Postgres), whether free tiers and self-hosting matter, sign-in methods (email, social, passkeys), and roles beyond `anonymous`, `user` and `admin` (for example admin levels such as support or moderator).
 - Hosting: own server with Docker Compose, a self-hosted PaaS, or a managed platform running the Dockerfile; whether they want staging; the email provider, if the app sends mail.
 - Expected users at launch and in 12 months, the traffic pattern, and any real-time or offline needs.
-- Budget, and how much server administration they are willing to do.
+- Budget, including a monthly limit for paid services, and how much server administration they are willing to do.
 - Git host, team size, release style (continuous or scheduled).
 - Visual identity: brand colors, logo, mood or references, or a request for recommendations. Never invent a palette silently.
 - Public pages and SEO: what should appear in search engines, target countries, policy for AI crawlers.
@@ -65,7 +65,7 @@ Security defaults, tests-first, folder docs, the error catalog and the three wor
 
 If the user named a stack, use it, but first flag any serious security, scalability, SEO or fit problem. Otherwise recommend a primary option and a runner-up, each with its fit for the idea, trade-offs, learning curve given what the user knows, security posture (secure defaults, maturity, patch cadence), scaling, SEO fit (server rendering for public pages), hosting fit and cost (free tiers, self-hosting). The options and their trade-offs are in `references/architecture.md`, `backend.md`, `hosting.md` and `design.md`. Prefer mature, well-documented, actively maintained frameworks with secure defaults. For the data store, say which family it locks in and what a later move would take: within a family a new connection string and the promote script, across families a rewrite of the data layer (`references/backend.md`).
 
-Then summarize the plan, one or two lines per item, and wait for confirmation. Keep that reply proportional to the project: for a small or lean project, a short plan and only the questions whose answers would change it. Cover: profile; architecture; data store and ORM; auth approach; caching; local development and the promote script; hosting, edge protection, email, staging and scaling path; branching model; styling, component base and toast library; colors and look (generate the color proposals before this summary, so it names their real shades; shown in the draft); SEO, analytics, consent, legal documents and languages; test, logging and security tooling; the agent roster for the profile (`references/agents.md`); and what waits for Phase 2.
+Then summarize the plan, one or two lines per item, and wait for confirmation. Keep that reply proportional to the project: for a small or lean project, a short plan and only the questions whose answers would change it. Cover: profile; architecture; data store and ORM; auth approach; roles and their permissions; safeguards (costly features with their providers, budgets and breakers, spending caps, who receives security alerts; `references/safeguards.md`); caching; local development and the promote script; hosting, edge protection, email, staging and scaling path; branching model; styling, component base and toast library; colors and look (generate the color proposals before this summary, so it names their real shades; shown in the draft); SEO, analytics, consent, legal documents and languages; test, logging and security tooling; the agent roster for the profile (`references/agents.md`); and what waits for Phase 2.
 
 Once the plan is confirmed, show the draft before any code: copy `templates/plan-preview.html` to `${TMPDIR:-/tmp}/plan-preview/index.html` and fill it with the system and main-flow diagrams, the data model and example payloads for the main actions (`references/architecture.md`), and, for apps with screens, the color proposals, the look and rough mockups of the main screens (`references/design.md`). Open it for the user (`open` on macOS, `xdg-open` on Linux, or give the path; keep `themes/` next to it) and revise until they approve; a change costs minutes here and days once code exists.
 
@@ -85,6 +85,7 @@ The rules apply from the first line of code; only some of the tooling that enfor
 | `architecture.md` | `docs/ARCHITECTURE.md` |
 | `backend.md` | `docs/DATABASE.md`; the Auth, APIs and Caching sections of `docs/ARCHITECTURE.md` |
 | `security.md` | `docs/security/THREAT-MODEL.md`, `docs/security/findings.md`, root `SECURITY.md` |
+| `safeguards.md` | `docs/security/SAFEGUARDS.md` |
 | `privacy.md` | `docs/PRIVACY.md` |
 | `hosting.md` | `docs/DEPLOYMENT.md`, `docs/SCALING.md`, `docs/OPERATIONS.md` |
 | `git-workflow.md`, `folder-docs.md` | `CONTRIBUTING.md` |
