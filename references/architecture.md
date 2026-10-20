@@ -46,7 +46,7 @@ Record where state lives (database, object storage, cache) as described in `docs
 
 This file keeps two diagrams as Mermaid text, so they show up in git diffs, render on GitHub and cost an AI reader few tokens:
 
-- System: the users, the app's parts (web app, workers), the data stores and every outside service (auth provider, email, object storage, payments, analytics), with what crosses each arrow.
+- System: the users, the app's parts (web app, workers), the data stores and every outside service (auth provider, email, object storage, payments, analytics), with what crosses each arrow. Drawn top-down (`flowchart TB`), so it stays readable on a phone and in a narrow editor pane.
 - Main flow: a sequence diagram of the app's main task, from the browser through route, service and repository to the database and back, including the feedback the user sees.
 
 Each stays at about a dozen boxes: detail lives in the folder docs and the code map, and a diagram that shows every file goes stale. The database diagram is generated from the schema (`docs/DATABASE.md`), never drawn by hand. A change that adds or removes a part, a data store or an outside service, or changes the main flow, updates the diagrams in the same PR.

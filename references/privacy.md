@@ -5,7 +5,7 @@ Becomes `docs/PRIVACY.md`. Applies whenever the app serves people in the EU (GDP
 ## Data protection
 
 - `docs/PRIVACY.md` keeps a data inventory: which personal data is collected, why (purpose and legal basis), where it is stored, which providers process it, and how long it is kept.
-- Collect the minimum. Host EU users' data in an EU region and sign data processing agreements with providers.
+- Collect the minimum. Store EU users' personal data in an EU region: the database, backups, uploaded files and logs. A service that only passes traffic through, such as an edge proxy or CDN that terminates TLS, may be outside the EU when it is listed as a processor with a data processing agreement and a transfer basis (an adequacy decision such as the EU-US Data Privacy Framework, or standard contractual clauses), and it never caches personal data. The plan names an EU-based alternative next to it, so the user chooses knowingly. Sign data processing agreements with every provider.
 - Users can export their data and delete their account. Deletion cascades to their content, media, caches, search index and sitemap entries; backups age out according to the retention policy.
 - Retention periods are defined for logs, backups and deleted content.
 - User-generated content is public and indexable only when its owner publishes it. Precise locations are personal data: offer approximate locations where that matters. Deleted public content returns 410 and leaves the sitemap.

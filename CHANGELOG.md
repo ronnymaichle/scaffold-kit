@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.0 (2026-10-20)
+
+- Privacy (`privacy.md`): EU users' personal data is stored in the EU (database, backups, uploaded files, logs). An edge proxy or CDN that only passes traffic through may be outside the EU when it is a listed processor with a data processing agreement and a transfer basis, and caches no personal data; the plan names an EU-based alternative next to it. `security.md`'s edge protection links to this, which resolves the conflict between the two references.
+- Multi-tenant data (`backend.md`): an app planned for several organizations is multi-tenant from its first migration, even with one tenant at launch. Repositories always filter by tenant, with cross-tenant tests. Row Level Security is a second layer, with a pattern for self-hosted Postgres: a non-owner app role, the tenant set per transaction with `set_config(..., true)` so pooled connections are safe, policies that match nothing when it is missing, and a separate role for work that spans tenants. The security tests row includes policy and cross-tenant tests.
+- Diagrams (`architecture.md`): the system diagram is drawn top-down, so it stays readable on a phone.
+- Root `CLAUDE.md` template: the Data and Privacy summary lines carry the above.
+- Projects: in upgrade mode, check where stored personal data and the edge provider sit and record them in `docs/PRIVACY.md`; a multi-tenant app adds the tenant filter tests and, on Postgres, the non-owner role and policies through the Feature workflow; redraw the system diagram top-down when it is next changed; update the two summary lines in the root `CLAUDE.md`.
+
 ## 2.5.1 (2026-10-20)
 
 Fixes from a dry run of the plan step with a sample idea.
