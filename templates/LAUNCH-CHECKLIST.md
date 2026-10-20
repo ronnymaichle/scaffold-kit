@@ -13,6 +13,16 @@ Everything here is finished before real users arrive. Each item is its own `chor
 - [ ] Email: SPF, DKIM and DMARC published and verified; bounce and complaint webhooks suppress addresses; staging cannot email real users
 - [ ] Usage alerts for every free tier in use, and a written plan for exceeding each limit
 
+## Safeguards and spending
+
+- [ ] A monthly budget with alerts at 50%, 80% and 100% for every paid provider; a hard cap or pause where the provider offers one, and otherwise a budget notification that trips the matching breakers (`docs/security/SAFEGUARDS.md`)
+- [ ] Maximum instance counts, concurrency limits and timeouts on autoscaling and functions
+- [ ] Every API key that ships to a client restricted to the app's domains, bundle ids or package names and the APIs it needs, with quotas
+- [ ] Breaker budgets, quotas and rate limits checked against usage in staging; a breaker trip and reset rehearsed
+- [ ] A test security event reaches every admin alert channel
+- [ ] MFA required for admin and staff accounts
+- [ ] Mobile apps: app attestation enforced on costly endpoints, and the minimum supported app version set on the server
+
 ## Monitoring and operations
 
 - [ ] Error tracker (GlitchTip or Sentry) with releases, environments and PII scrubbing
@@ -41,7 +51,7 @@ Everything here is finished before real users arrive. Each item is its own `chor
 
 - [ ] Data protection impact assessment, if required; records of processing activities
 - [ ] Incident response plan with contacts and breach-notification steps
-- [ ] MFA required for admin and staff accounts; append-only audit log in place
+- [ ] The audit log copied to storage the app cannot change or delete; the admin area behind an access proxy or IP allowlist
 - [ ] Infrastructure as code; point-in-time recovery with a restore drill; recovery time and recovery point objectives written down
 - [ ] SBOM per release; blocking dependency and container scans
 - [ ] External penetration test, findings fixed or accepted in `docs/security/findings.md`

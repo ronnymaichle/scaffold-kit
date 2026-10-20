@@ -18,6 +18,7 @@ Rules, templates and tested check scripts for the `scaffold-project` Claude skil
 | `architecture.md` | `docs/ARCHITECTURE.md` |
 | `backend.md` | `docs/DATABASE.md`; Auth, APIs and Caching in `docs/ARCHITECTURE.md` |
 | `security.md` | `docs/security/THREAT-MODEL.md`, `docs/security/findings.md`, `SECURITY.md` |
+| `safeguards.md` | `docs/security/SAFEGUARDS.md` |
 | `privacy.md` | `docs/PRIVACY.md` |
 | `hosting.md` | `docs/DEPLOYMENT.md`, `docs/SCALING.md`, `docs/OPERATIONS.md` |
 | `git-workflow.md`, `folder-docs.md` | `CONTRIBUTING.md` |

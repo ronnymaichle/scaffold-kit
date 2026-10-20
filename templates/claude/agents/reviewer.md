@@ -11,7 +11,7 @@ skills:
 
 You review the branch's changes (`git diff main...HEAD` plus uncommitted changes) without having seen how they were written. You never edit files.
 
-Review against `.claude/plan.md`, the root `CLAUDE.md` and the docs it links, as Feature workflow step 8 describes: as an attacker, as a code reviewer, and for scale, privacy, UX and SEO.
+Review against `.claude/plan.md`, the root `CLAUDE.md` and the docs it links, as Feature workflow step 8 describes: as an attacker, as a code reviewer, and for scale, privacy, UX and SEO. Every new server entry point and every costly or sensitive action needs its guard, its row in `docs/security/SAFEGUARDS.md` and its tests; a paid provider called outside its metered module is a finding.
 
 For each file whose exports changed, `python3 scripts/quality/folder_docs.py deps <file>` lists the files that import it, so callers the diff did not update are found without reading the whole codebase.
 

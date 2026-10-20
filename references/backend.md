@@ -1,6 +1,6 @@
 # Backend: data, auth, APIs and caching
 
-Becomes `docs/DATABASE.md` (data store, modeling, types, ORM, local and test databases) and the Auth, APIs and Caching sections of `docs/ARCHITECTURE.md`. Keep what applies, replace scaffold-time tables with the decision and its reason, drop the rest.
+Becomes `docs/DATABASE.md` (data store, modeling, types, ORM, local and test databases) and the Auth (including roles and permissions), APIs and Caching sections of `docs/ARCHITECTURE.md`. Keep what applies, replace scaffold-time tables with the decision and its reason, drop the rest.
 
 ## Choosing the data store (scaffold-time)
 
@@ -34,10 +34,22 @@ Offline-first apps need an explicit sync design whatever the store: local storag
 
 - Email verification; password reset with single-use, expiring tokens; rate limiting with backoff on login, signup and reset.
 - Passwords hashed with argon2id or bcrypt through the library; never hand-rolled crypto.
-- Optional MFA (TOTP) and passkeys; MFA required for admin and staff accounts in the strict profile.
+- Optional MFA (TOTP) and passkeys for users; MFA required for admin and staff accounts (in the lean profile, recommended).
 - Social login through OAuth or OIDC with state and PKCE.
 - Sessions rotate on login and privilege change and are revoked on the server at logout and password change.
-- Roles and permissions live in the database and are checked in services, never only in the UI.
+
+### Roles and permissions
+
+- Every app starts with three roles: `anonymous` (visitors without an account), `user` (signed in) and `admin`. Further roles and admin levels (for example `support`, `moderator` or `owner`) are decided in the plan from what the app needs (scaffold-time), and can be added later without changing the code that checks access. Multi-tenant apps also have roles inside each tenant (for example `owner` and `member`), held per membership, next to the platform's own `admin`.
+- Code checks permissions, never role names: `can(actor, 'marker.delete', marker)`, on the server, in every entry point (`docs/security/SAFEGUARDS.md`). Permissions are named `resource.action` and listed in one typed catalog in code (for example `$lib/server/auth/permissions.ts`), together with the map from each role to its permissions, so an unknown permission fails type checking. A new role is an entry in that map, reviewed and tested like any other code. Roles that admins define in the running app are added only when customers need their own, as an architecture change with an ADR.
+- Who holds which role lives in the database (a `user_roles` table, or the membership in a multi-tenant app). A user can hold several roles, and gets the permissions of all of them.
+- `anonymous` has its permissions listed like every other role, starting from none, so what visitors can do is written down and tested.
+- Ownership is a separate check: `marker.delete` lets a user delete their own markers, `marker.delete.any` lets a moderator delete anyone's.
+- Costly features need a verified account (`docs/security/SAFEGUARDS.md`).
+- The first admin is created with a command run on the server (for example `admin:grant <email>`), never through sign-up, a default password, or an environment variable that grants admin at start.
+- Changing roles needs the `roles.manage` permission. Nobody can grant a permission they do not hold or change their own roles, and the last admin cannot be removed. A role change rotates the user's sessions, goes into the audit log, and notifies the user and the admins.
+- The admin area has its own routes (for example `/admin`), which are `noindex` and check permissions in every entry point like any other route.
+- Tests: the permission matrix and route coverage tests (`docs/TESTING.md`).
 
 ### Sessions by approach
 
@@ -98,7 +110,7 @@ Verify current versions and support for special types such as PostGIS with a web
 ## APIs
 
 - Inside a full-stack framework, prefer its own data loading and form actions; add JSON endpoints only for client-fetched data.
-- JSON endpoints share one error shape (`{ code, message, ref }` from the error catalog), cursor-based pagination with a maximum page size, idempotency keys on create and payment endpoints, rate limits and schema validation. Cross-origin access and incoming webhooks follow `docs/security/THREAT-MODEL.md`.
+- JSON endpoints share one error shape (`{ code, message, ref }` from the error catalog), cursor-based pagination with a maximum page size, idempotency keys on create and payment endpoints, rate limits (`docs/security/SAFEGUARDS.md`) and schema validation. Cross-origin access and incoming webhooks follow `docs/security/THREAT-MODEL.md`.
 - A public or mobile API gets a version prefix (`/api/v1`) and an OpenAPI description generated from the validation schemas.
 
 ## Caching

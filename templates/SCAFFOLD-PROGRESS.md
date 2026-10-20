@@ -31,8 +31,10 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 - [ ] Public apps: versioned legal documents and the append-only terms-acceptance table; the acceptance step itself is built with sign-up
 - [ ] DTO pattern and type checks spanning database, server and UI; schema-drift check in `check`
 - [ ] Auth library or platform installed and configured; sign-up and sign-in are built afterwards as the first feature, through the Feature workflow
+- [ ] Roles and permissions: the permission catalog with `anonymous`, `user`, `admin` and any roles the plan adds; `can()` and the `guard()` helper for every entry point; the role assignments table; the first-admin command; the permission matrix and route coverage tests
+- [ ] Safeguards: the rate limiter and quota modules, the security event catalog with its thresholds, the audit log table, the alert module (email and the admin alert inbox), feature breakers with read-only mode, a metered module for each paid provider in the plan with the lint rule that keeps its SDK inside it, and the safeguards table with the budgets from the plan
 - [ ] Logger with redaction, `logs/dev.log` in development, error catalog, `AppError` and global error handling
-- [ ] Docs: `docs/DATABASE.md`, `docs/LOGGING.md`, `docs/PRIVACY.md` (data protection and the first data inventory), the Auth, APIs and Caching sections of `docs/ARCHITECTURE.md`; ADR `0003-data-and-auth`
+- [ ] Docs: `docs/DATABASE.md`, `docs/LOGGING.md`, `docs/PRIVACY.md` (data protection and the first data inventory), `docs/security/SAFEGUARDS.md`, the Auth (with roles and permissions), APIs and Caching sections of `docs/ARCHITECTURE.md`; ADR `0003-data-and-auth`
 - [ ] Folder docs and code map updated; `check` passes; commit `chore(scaffold): data, auth and errors`
 
 ## Checkpoint C: interface and public web
@@ -61,6 +63,8 @@ Items that do not apply to the profile are deleted when this file is created. Ea
   - [ ] with the `noop` adapter there are no third-party requests and no non-necessary cookies
   - [ ] the dev design page renders in both themes, with every feedback variant
   - [ ] a test error appears in the logs with requestId and commit, and as an error toast showing the same ref
+  - [ ] a test security event past its threshold blocks the actor, reaches the admin alert inbox and the local mail catcher, and appears in the audit log
+  - [ ] a tripped breaker returns `FEATURE_DISABLED` to a user, still lets an admin through, and stays tripped until an admin resets it
   - [ ] every rule from the kit references that applies to this profile is in its mapped file
   - [ ] no `{{` placeholders and no `TODO(describe)` markers remain
 - [ ] Every critical and high finding resolved; this file deleted; commit `chore(scaffold): delivery, docs and verification`

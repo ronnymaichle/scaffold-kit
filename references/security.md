@@ -1,6 +1,6 @@
 # Security
 
-Becomes `docs/security/THREAT-MODEL.md` (threat model, defaults in force, scanning and severity policy), `docs/security/findings.md` (open and accepted risks) and the root `SECURITY.md` (from `templates/SECURITY.md`). Keep what applies to the chosen stack and profile.
+Becomes `docs/security/THREAT-MODEL.md` (threat model, defaults in force, audit log, scanning and severity policy), `docs/security/findings.md` (open and accepted risks) and the root `SECURITY.md` (from `templates/SECURITY.md`). Keep what applies to the chosen stack and profile.
 
 Security comes right after correctness. When two options are otherwise comparable, take the more secure one and say so.
 
@@ -11,7 +11,7 @@ Security comes right after correctness. When two options are otherwise comparabl
 ## Application defaults
 
 - Input: validate every external input at the boundary with a schema; reject unknown fields; enforce length and size limits.
-- Authorization: deny by default; check ownership on the server on every read and write of a user-owned resource (prevents IDOR); never trust ids, roles or prices from the client.
+- Authorization: deny by default; check permissions, never role names, in every server entry point (`docs/ARCHITECTURE.md`, Roles and permissions); check ownership on the server on every read and write of a user-owned resource (prevents IDOR); never trust ids, roles or prices from the client.
 - Authentication and sessions: follow `docs/ARCHITECTURE.md` (Auth); rate limits on login, signup and password reset.
 - Database: parameterized queries or a query builder only; a least-privilege database user, never a superuser; never on a public port.
 - Output: framework escaping; never render user content as raw HTML (`{@html}`, `dangerouslySetInnerHTML`, `v-html`); sanitize rich text on the server with a maintained sanitizer.
@@ -21,10 +21,11 @@ Security comes right after correctness. When two options are otherwise comparabl
 - Cross-origin requests (CORS): same-origin by default, with no CORS headers. When another origin must call the API (for example a separate frontend), allow an explicit list of origins per environment from configuration; never `*` together with credentials, never echo the request's `Origin` back unchecked, and allow only the methods and headers in use. Native mobile apps do not need CORS. CORS is not access control: authorization still runs on every request.
 - Incoming webhooks: verify the provider's signature over the raw request body with a constant-time comparison (the provider's SDK where it has one); reject events whose signed timestamp is older than about five minutes; store each event id and ignore repeats, because providers deliver at least once; answer 2xx quickly and do the work in a background job. The payload is untrusted input: for state that matters, such as payments and subscriptions, fetch the object from the provider's API instead of trusting the event body. Each environment has its own webhook secret.
 - Outgoing webhooks, if the app sends them: signed (HMAC over a timestamp and the body), and each target URL resolved and rejected when it points to a private, loopback or link-local address (SSRF).
-- Bots and abuse: rate limits come first (`docs/ARCHITECTURE.md`). Public forms add a hidden honeypot field; sign-up, password reset and other public forms add a privacy-friendly challenge (for example Cloudflare Turnstile, hCaptcha or ALTCHA) once the app is public or abuse appears, verified on the server for every submission. Its cookies are listed in the cookie policy with their category (`docs/PRIVACY.md`).
+- Abuse, cost and leaks: limits, quotas, spending caps, circuit breakers, security events and who is alerted follow `docs/security/SAFEGUARDS.md`. Public forms add a hidden honeypot field; sign-up, password reset and other public forms add a privacy-friendly challenge (for example Cloudflare Turnstile, hCaptcha or ALTCHA) once the app is public or abuse appears, verified on the server for every submission. Its cookies are listed in the cookie policy with their category (`docs/PRIVACY.md`).
 - Configuration: environment variables validated with a schema at startup so the app fails fast on missing or invalid values; secrets only in server-only modules (SvelteKit `$env/static/private`); `.env` gitignored, `.env.example` committed with placeholders.
 - Health endpoints: the public liveness endpoint returns only a status; readiness details, version and commit are available only on the internal network or behind auth.
 - Logs: no secrets or personal data (`docs/LOGGING.md`).
+- Audit log: an append-only table of security-relevant actions (sign-ins, role and permission changes, exports, deletions, admin actions, blocks and locks, breaker trips and resets), kept apart from application logs; the app can insert into it but never update or delete. It holds ids rather than personal details where it can, and is in the data inventory with its retention period (`docs/PRIVACY.md`).
 
 ## Servers and deployment
 
@@ -54,7 +55,7 @@ Layered, because no single tool or review catches everything. Verify each tool's
 | Secrets in code | gitleaks | pre-commit (staged) and CI (full history) | 1 |
 | Dependency vulnerabilities | the ecosystem audit (`bun audit`, `npm audit`, `pip-audit`, `govulncheck`) plus OSV-Scanner or Trivy | `check:security`, CI, weekly scheduled run | 1 |
 | Static analysis | Semgrep (community and framework rules) and security lint rules | `check:security` and CI | 1 |
-| Security tests | authorization negative tests, validation tests, rate-limit tests, CORS and webhook-signature tests; RLS policy or security-rule tests where they are used, and cross-tenant tests for multi-tenant apps | every `check` | 1 |
+| Security tests | authorization negative tests, the permission matrix and route coverage tests, validation tests, rate-limit, quota and breaker tests, CORS and webhook-signature tests; RLS policy or security-rule tests where they are used, and cross-tenant tests for multi-tenant apps | every `check` | 1 |
 | AI review | Claude reviews every diff (Feature workflow, step 8); Claude Code's `/security-review` when available | every feature | 1 |
 | Dependency updates | Renovate or Dependabot, security updates first | automatic PRs | 2 |
 | Container and config | Trivy (image, Dockerfile, compose), hadolint | CI on every image build | 2 |
@@ -79,8 +80,7 @@ An internal tool reachable only through a VPN or an access proxy (for example Ta
 ## Strict profile additions
 
 - A second reviewer, or the user's explicit sign-off recorded in the PR, for changes to auth, permissions, payments or personal data.
-- An append-only audit log of security-relevant actions (logins, permission changes, exports, deletions, admin actions).
-- MFA required for admin and staff accounts.
+- The audit log is also copied to storage the app cannot change or delete (for example object storage with a retention lock), and access to it is itself logged.
 - Field-level encryption for especially sensitive columns; secrets in a secrets manager rather than plain environment files.
 - An SBOM per release (for example Syft) and blocking dependency and container scans.
 - ZAP baseline on every release and an external penetration test before launch.

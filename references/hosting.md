@@ -111,6 +111,7 @@ k6 (or an equivalent) scripts in `tests/load/` cover the hottest endpoints. The 
 - The error tracker (`docs/LOGGING.md`) reports new error types and error-rate spikes.
 - Alerts also fire on disk above 80%, sustained high memory or CPU, TLS certificate expiry, failed backups, failed or stuck jobs, and usage approaching any free-tier limit.
 - Every free tier in use has a usage alert below its limit and a written plan for exceeding it: upgrade, optimize, or leave along the exit path recorded in its ADR.
+- Spending: budgets, hard caps, maximum instance counts and the breakers that stop a runaway bill follow `docs/security/SAFEGUARDS.md`; their runbook entries are here.
 - Alerts go to a channel the user reads (email, Telegram, Slack). Each alert has a runbook entry in `docs/OPERATIONS.md`: what it means, how to check, how to fix or escalate.
 - Once metrics or a log store exist, one dashboard shows request rate, error rate, p95 latency, saturation (CPU, memory, database connections) and job queue depth.
 
