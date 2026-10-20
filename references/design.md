@@ -14,14 +14,16 @@ Colors are chosen at the plan step, with the draft (`docs/ARCHITECTURE.md`). Gen
 
 ```bash
 DRAFT="${TMPDIR:-/tmp}/plan-preview"
-python3 "$KIT/scripts/quality/palette.py" theme --primary "#2563eb" --out "$DRAFT/themes/a.css"
-python3 "$KIT/scripts/quality/palette.py" theme --primary "#0f766e" --highlight "#f59e0b" --out "$DRAFT/themes/b.css"
-python3 "$KIT/scripts/quality/palette.py" preview "$DRAFT/themes/a.css" "$DRAFT/themes/b.css" --out "$DRAFT/themes/index.html"
+python3 -B "$KIT/scripts/quality/palette.py" theme --primary "#2563eb" --out "$DRAFT/themes/a.css"
+python3 -B "$KIT/scripts/quality/palette.py" theme --primary "#0f766e" --highlight "#f59e0b" --out "$DRAFT/themes/b.css"
+python3 -B "$KIT/scripts/quality/palette.py" preview "$DRAFT/themes/a.css" "$DRAFT/themes/b.css" --out "$DRAFT/themes/index.html"
 ```
+
+`-B` keeps Python's bytecode cache out of the kit folder, which is copied into the project unchanged. Generate the proposals before writing the plan summary, so it names the shades the user will actually see.
 
 The palette preview shows each proposal in light and dark: swatches, buttons, inputs, a card, alerts, toasts and the contrast results. The draft page links to it, and its screen mockups switch between the proposals. Never apply a theme the user has not approved; the approved CSS becomes the theme file listed in `quality.config.json` (`design.themeFiles`).
 
-The script keeps a requested color exact wherever it passes contrast. When it cannot carry text in a role (for example a button background behind white text), the script derives the nearest accessible shade for that role and prints a note: keep the original as the `--highlight` color or an accent, and explain the change to the user.
+The script keeps a requested color exact wherever it passes contrast. When it cannot carry text in a role (for example a button background behind white text), the script derives the nearest accessible shade for that role and prints a note naming both colors (for example `#b8603a becomes #b25a34 in light mode`): keep the original as the `--highlight` color or an accent, and explain the change to the user.
 
 ## Look (scaffold-time)
 
@@ -32,7 +34,7 @@ Colors are only part of the look. Decide the rest with them, from the mood or re
 - Corners: the `--radius` token. About 0.25rem looks sharp and technical, 0.5-0.75rem soft (the generated theme uses 0.625rem), 1rem or more friendly and rounded.
 - Motion: subtle (short fades and slides, the default) or minimal (state changes only), within the timing rule below.
 
-The decisions become tokens and defaults: `--radius` in the theme file, the font family in the styling framework's theme (Tailwind v4: `--font-sans` in `@theme`), and the density as the default size of the base components.
+The decisions become tokens and defaults: `--radius` in the app's main stylesheet, after the theme file is imported (the generated theme file is regenerated, never edited by hand), the font family in the styling framework's theme (Tailwind v4: `--font-sans` in `@theme`), and the density as the default size of the base components.
 
 ## Screen mockups
 

@@ -69,6 +69,13 @@ class KitFileTests(unittest.TestCase):
             with self.subTest(placeholder=placeholder):
                 self.assertRegex(placeholder, r"^\{\{(\.\.\.|[A-Z_]+(: [^{}]+)?)\}\}$")
 
+    def test_plan_preview_template_fits_three_proposals_and_wide_diagrams(self):
+        text = (KIT / "templates" / "plan-preview.html").read_text(encoding="utf-8")
+        for theme in ("a", "b", "c"):
+            self.assertIn(f'<option value="themes/{theme}.css">', text)
+        self.assertIn("useMaxWidth: false", text, "wide diagrams scroll instead of shrinking")
+        self.assertIn("main > * { min-width: 0; }", text, "and they scroll in their box, not the page")
+
 
 if __name__ == "__main__":
     unittest.main()
