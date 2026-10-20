@@ -12,6 +12,11 @@ BRANDS = [
 ]
 
 
+def _light_hex(css, role):
+    value = design_tokens.parse_theme_text(css)["base"][role]
+    return colors.to_hex(colors.parse_color(value)[:3])
+
+
 class ThemeTests(unittest.TestCase):
     def test_every_brand_produces_a_passing_theme(self):
         for brand in BRANDS:
@@ -38,6 +43,23 @@ class ThemeTests(unittest.TestCase):
     def test_unreadable_brand_gets_a_note(self):
         _css, notes = palette.build_theme("#facc15")
         self.assertTrue(notes)
+
+    def test_note_names_the_derived_shade(self):
+        css, notes = palette.build_theme("#facc15")
+        derived = _light_hex(css, "primary")
+        self.assertNotEqual(derived, "#facc15")
+        self.assertTrue(any("#facc15" in n and derived in n for n in notes), notes)
+
+    def test_unreadable_highlight_gets_a_note_naming_the_derived_shade(self):
+        css, notes = palette.build_theme("#2563eb", highlight="#b8603a")
+        derived = _light_hex(css, "highlight")
+        self.assertNotEqual(derived, "#b8603a")
+        self.assertTrue(any(n.startswith("highlight") and "#b8603a" in n and derived in n for n in notes), notes)
+
+    def test_readable_highlight_is_kept_without_a_note(self):
+        css, notes = palette.build_theme("#2563eb", highlight="#9a3412")
+        self.assertEqual(_light_hex(css, "highlight"), "#9a3412")
+        self.assertEqual(notes, [])
 
     def test_scale_has_eleven_descending_steps(self):
         scale = palette.build_scale(260.0, 0.2)

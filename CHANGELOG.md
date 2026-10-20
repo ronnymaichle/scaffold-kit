@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.5.1 (2026-10-20)
+
+Fixes from a dry run of the plan step with a sample idea.
+
+- `palette.py` now prints a note when it changes the highlight color, not only the primary, and every note names the requested and the derived color (for example `#b8603a becomes #b25a34 in light mode`), so the change can be explained without converting OKLCH by hand.
+- Commands that run kit scripts from the kit folder use `python3 -B` (`references/design.md`, `references/upgrade.md`, the skill's upgrade checks), so no `__pycache__` is written into the kit; step 4.5 copies `scripts/quality/` without it.
+- `references/design.md`: `--radius` is set in the app's main stylesheet after the theme import, since the generated theme file is never edited by hand; the color proposals are generated before the plan summary, so it names their real shades.
+- `templates/plan-preview.html`: a third color proposal in the theme switch; `{{LANG}}` is the user's language and each mockup frame carries the app's language; Mermaid diagrams keep their natural size and scroll sideways instead of shrinking until unreadable.
+- Skill step 3: the plan summary is one or two lines per item, and the draft is opened with `open` or `xdg-open`, or given as a path, with its `themes/` folder next to it. The saved claude.ai skill needs updating.
+- Projects: nothing to do. A project that copied `scripts/quality/` with a `__pycache__` folder can delete it.
+
 ## 2.5.0 (2026-10-19)
 
 - Linked files in the folder docs: `folder_docs.py` reads each file's imports and writes its `Depends on:` line, listing the project files it imports by path from the project root (for Go, the package folders). `init` writes and refreshes the lines, and `check`, and so the pre-commit hook, fails when one no longer matches the code, so which files are connected can be trusted without opening them. Test files and glob entries get none; `folderDocs.dependsCheck: false` turns the check off.

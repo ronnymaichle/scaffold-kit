@@ -7,10 +7,11 @@
 <!--
   The plan-step draft (architecture.md: Draft before code; design.md: Look and Screen mockups).
   Copy to "${TMPDIR:-/tmp}/plan-preview/index.html", next to the themes/ folder palette.py writes, fill every {{...}}
-  in the user's language, and delete what does not apply: an API without screens keeps Architecture, Data model and
+  in the user's language ({{LANG}} is that language), and delete what does not apply: an API without screens keeps Architecture, Data model and
   Planned actions; the lean profile keeps the system diagram, the data model and the main screen.
   Never committed. After approval the diagrams and payloads go into docs/ARCHITECTURE.md and the screens into docs/mockups/.
-  In Mermaid text, write < and & as &lt; and &amp;.
+  In Mermaid text, write < and & as &lt; and &amp;. Wide diagrams keep their size and scroll sideways; draw the system
+  diagram top-down (flowchart TB) so it stays readable on a phone.
 -->
 <link id="theme" rel="stylesheet" href="themes/a.css">
 <!-- Preview only: the chosen font from a pinned Fontsource package (the app self-hosts it), for example
@@ -33,6 +34,7 @@
   .controls button, .controls select { font: inherit; font-size: 14px; padding: 4px 10px; border: 1px solid var(--input, #a1a1aa); border-radius: 6px; background: var(--background, #fff); color: inherit; cursor: pointer; }
   .controls button[aria-pressed="true"] { background: var(--primary, #18181b); color: var(--primary-foreground, #fff); border-color: transparent; }
   main { max-width: 1280px; margin: 0 auto; padding: 24px 16px 64px; display: grid; gap: 40px; }
+  main > * { min-width: 0; } /* a wide diagram scrolls in its box instead of widening the page */
   h2 { margin: 0 0 12px; font-size: 20px; }
   h3 { margin: 0 0 8px; font-size: 16px; }
   pre.mermaid { margin: 0 0 24px; padding: 16px; background: var(--background, #fff); border: 1px solid var(--border, #e4e4e7); border-radius: 12px; overflow-x: auto; }
@@ -68,6 +70,7 @@
       <select id="theme-select">
         <option value="themes/a.css">A: {{THEME_A}}</option>
         <option value="themes/b.css">B: {{THEME_B}}</option>
+        <option value="themes/c.css">C: {{THEME_C}}</option><!-- delete with two proposals -->
       </select>
     </label>
     <button type="button" id="mode" aria-pressed="false">Dark</button>
@@ -125,10 +128,10 @@
   <section id="screens">
     <h2>Screens</h2>
     <!-- One figure per screen: the main state, plus the empty state of the screen a new user lands on.
-         Plain HTML with real labels and realistic fake data; no logic. -->
+         Plain HTML with real labels in the app's language and realistic fake data; no logic. -->
     <figure>
       <figcaption>{{SCREEN_NAME}}: {{WHAT_THE_USER_DOES_HERE}}</figcaption>
-      <div class="frame">
+      <div class="frame" lang="{{APP_LANG}}">
         {{SCREEN_MARKUP}}
       </div>
     </figure>
@@ -163,7 +166,11 @@
   for (const el of diagrams) el.dataset.source = el.textContent;
   async function render() {
     const dark = document.documentElement.classList.contains("dark");
-    mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "neutral" });
+    const natural = { useMaxWidth: false };
+    mermaid.initialize({
+      startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "neutral",
+      flowchart: natural, sequence: natural, er: natural,
+    });
     for (const el of diagrams) {
       el.removeAttribute("data-processed");
       el.textContent = el.dataset.source;

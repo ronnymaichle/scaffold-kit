@@ -194,13 +194,13 @@ def build_theme(primary, highlight=None, tailwind=True):
         light["primary"], light["primary-foreground"] = brand, brand_rgb_ok
     else:
         if brand_rgb_ok is not None:
-            notes.append("primary is too close to the background to read as a button; derived a darker shade")
+            notes.append(("primary", primary, "primary is too close to the background to read as a button; derived a darker shade"))
         else:
-            notes.append("primary cannot carry readable text as is; derived the nearest shade that can")
+            notes.append(("primary", primary, "primary cannot carry readable text as is; derived the nearest shade that can"))
         light["primary"], light["primary-foreground"] = _light_solid(primary_family, hue, white_ish, black_ish)
         if _cr(light["primary"], light["background"]) < 1.5:
             light["primary"], light["primary-foreground"] = neutral(0.205), white_ish
-            notes.append("primary falls back to near-black; use the brand color as highlight instead")
+            notes.append(("primary", primary, "primary falls back to near-black; use the brand color as highlight instead"))
     ring_family = primary_family
     if _cr(light["primary"], light["background"]) >= _UI and _cr(light["primary"], light["card"]) >= _UI:
         light["ring"] = light["primary"]
@@ -233,6 +233,7 @@ def build_theme(primary, highlight=None, tailwind=True):
         if fg is not None:
             light["highlight"], light["highlight-foreground"] = hl, fg
         else:
+            notes.append(("highlight", highlight, "highlight cannot carry readable text as is; derived the nearest shade that can"))
             light["highlight"], light["highlight-foreground"] = _light_solid(hl_family, hl[2], white_ish, black_ish)
         dark["highlight"], dark["highlight-foreground"] = _dark_solid(
             _family(hl[2], min(max(hl[1], 0.02), 0.32) * 0.9), white_ish, black_ish
@@ -265,7 +266,11 @@ def build_theme(primary, highlight=None, tailwind=True):
     if failures:
         detail = "; ".join(f"{r['theme']} {r['fg']} on {r['bg']}: {r['ratio']}" for r in failures)
         raise RuntimeError(f"generated theme failed contrast checks: {detail}")
-    return css, notes
+    named = []
+    for role, requested, message in notes:
+        derived = colors.to_hex(colors.parse_color(themes["base"][role])[:3])
+        named.append(f"{message} ({_norm_hex(requested)} becomes {derived} in light mode)")
+    return css, named
 
 
 _ROLE_ORDER = [
