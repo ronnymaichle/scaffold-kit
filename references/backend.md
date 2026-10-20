@@ -61,7 +61,8 @@ Offline-first apps need an explicit sync design whatever the store: local storag
 - Normalize by default (3NF); denormalize only for a measured read need. JSONB only for genuinely flexible attributes, never for core relations.
 - Indexes on every foreign key and on every query's filter and sort columns; GiST for geo; EXPLAIN on realistic data for hot queries.
 - Money as integer minor units or numeric; enums as CHECK constraints or lookup tables; geo as PostGIS geography (SRID 4326).
-- Multi-tenant apps: `tenant_id` on every tenant-owned row, enforced in repositories and with Row Level Security where available.
+- Multi-tenant apps, including one that starts with a single organization but is planned for more: `tenant_id` on every tenant-owned row from the first migration, because adding it later touches every table and query. Repositories always filter by tenant, and integration tests prove that one tenant cannot read or change another's rows.
+- Row Level Security is a second layer wherever the database has it. On self-hosted Postgres: the app connects as a role that does not own the tables, so the policies apply to it (migrations run as the owner); each request's transaction sets the tenant with `set_config('app.tenant_id', $1, true)`, which ends with the transaction, so a pooled connection never carries it into the next request; each tenant-owned table has a policy comparing `tenant_id` with `current_setting('app.tenant_id', true)`, which matches no rows when the setting is missing. Work that spans tenants (a worker, a cross-tenant report) uses its own role, never the request handlers'. The policies have their own tests.
 - Document databases: model around access patterns, decide embed or reference per relationship, validate documents with a schema, index every query.
 - `docs/DATABASE.md` holds these conventions, a generated ERD (Mermaid) and per-table notes on personal data and retention.
 
