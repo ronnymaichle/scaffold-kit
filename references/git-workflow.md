@@ -9,17 +9,33 @@ Default for continuously deployed web apps, solo or small team: GitHub Flow with
 - `main` is always deployable and protected; merges deploy to staging automatically when staging exists.
 - Production deploys only from SemVer tags (`vX.Y.Z`), with manual approval in CI.
 - All work happens on short-lived branches from `main`, merged within a few days: one feature or fix per branch, one PR, squash-merged, so each feature is one commit on `main`.
-- No long-lived `develop` branch; unfinished work that must merge goes behind a feature flag.
+- No long-lived `develop` branch; unfinished work that must merge goes behind a release flag (Feature size, below).
 
 Alternative: Git Flow (`develop` plus `release/*` branches) only for scheduled releases or several supported versions at once (app-store mobile apps, on-premise software). Recommend against it for continuously deployed web apps.
 
+## Feature size
+
+Small PRs get better reviews, from people and from the `reviewer` agent alike, are easier to roll back, and keep `git bisect` precise.
+
+- A PR changes at most about 400 lines and 10 files of source code; tests, docs, generated migrations and lockfiles are not counted.
+- A bigger feature is split into parts before work starts, and the user approves the split. Each part is its own branch and PR, passes `check`, can be merged and deployed alone, and gets its own row in `docs/ROADMAP.md`.
+- Split by what a user can do, so each part can be tried: create before list, edit and delete; reading before writing. Do not split by layer (the database, then the server, then the screens): no part could be tested end to end, and each would merge code that nothing uses yet. Each part carries the migration it needs.
+- A part users should not see yet merges behind a release flag, and the last part removes the flag.
+
+### Release flags
+
+- Release flags live in one typed `flags` module, each naming its roadmap row and off by default; the first part that needs a flag creates the module.
+- Each environment sets them through environment variables validated at startup, so a flag changes only with a deploy: on in development and staging, off in production until the feature is finished.
+- The server checks the flag in every entry point the part adds, and a flagged-off entry point answers like a route that does not exist. Hiding links is not enough, because a hidden route can still be called.
+- A release flag is not a breaker. Breakers are switched by admins at runtime to stop a costly or broken feature, and they stay (`docs/security/SAFEGUARDS.md`); release flags live only until their feature is finished.
+
 ## Branch names
 
-`<type>/<issue-id>-<short-description>` (the issue id is optional), lowercase kebab-case, ASCII, at most ~50 characters.
+`<type>/<id>-<short-description>`, lowercase kebab-case, ASCII, at most ~50 characters. The id is the feature's row in `docs/ROADMAP.md` (`r7`) or an issue number, and is left out for work that has neither.
 
 | Prefix | Use for | Example |
 |---|---|---|
-| `feat/` | New feature | `feat/12-marker-comments` |
+| `feat/` | New feature | `feat/r7-marker-comments` |
 | `fix/` | Bug fix through the normal flow | `fix/upload-mime-check` |
 | `hotfix/` | Urgent production fix (Hotfix workflow) | `hotfix/session-cookie-expiry` |
 | `security/` | Security fix or hardening | `security/rate-limit-login` |
@@ -40,7 +56,7 @@ Alternative: Git Flow (`develop` plus `release/*` branches) only for scheduled r
 
 ## Pull requests
 
-- Title in Conventional Commit format. The body follows the PR template: what and why; how it was tested; security and privacy notes; scalability notes; SEO notes for public routes; analytics events added or changed; database changes and migrations (backward compatible, rollback plan); screenshots in light and dark mode, mobile and desktop, for UI changes; the checklist.
+- Title in Conventional Commit format. The body follows the PR template: the roadmap id; what and why; how it was tested; security and privacy notes; scalability notes; SEO notes for public routes; analytics events added or changed; database changes and migrations (backward compatible, rollback plan); screenshots in light and dark mode, mobile and desktop, for UI changes; the checklist.
 - Required CI checks: `check`, `check:security`, `test:e2e`, image build and PR title lint; Lighthouse CI and the image scan once added in Phase 2.
 - Claude reviews its own diff before opening the PR (Feature workflow, step 8). Merging is the user's decision unless they say otherwise. The branch is deleted after merge.
 

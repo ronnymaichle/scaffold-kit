@@ -20,7 +20,7 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 - [ ] `.claude/settings.json` and `.claude/agents/` from the kit's `templates/claude/`, keeping the agents the profile needs (`docs/AGENT-TEAM.md`); `.claude/skills/stack-conventions/SKILL.md` written from the official docs for the installed versions, each entry with its source and date, and those pages added to `docs/SOURCES.md`
 - [ ] `.gitignore` (including `.env`, `logs/`, `.claude/plan.md`), `.gitattributes`, `.editorconfig`, `.env.example` with placeholders
 - [ ] For apps with screens: `docs/mockups/` from the approved draft, with only its screens and the approved theme left, and that theme's CSS file next to it
-- [ ] Docs: `CONTRIBUTING.md` (git workflow and folder docs), `docs/ARCHITECTURE.md` (the approved diagrams, and the payloads under Planned actions), `docs/TESTING.md`, `docs/AGENT-TEAM.md`, `docs/security/THREAT-MODEL.md`, `docs/security/findings.md`; ADRs `0001-stack` and `0002-branching`
+- [ ] Docs: `CONTRIBUTING.md` (git workflow and folder docs), `docs/ARCHITECTURE.md` (the approved diagrams, and the payloads under Planned actions), `docs/ROADMAP.md` from the template (the confirmed plan's features in build order), `docs/TESTING.md`, `docs/AGENT-TEAM.md`, `docs/security/THREAT-MODEL.md`, `docs/security/findings.md`; ADRs `0001-stack` and `0002-branching`
 - [ ] Folder docs created with `folder_docs.py init`, every `TODO(describe)` replaced, code map generated
 - [ ] `check` passes; commit `chore(scaffold): foundation`
 
@@ -69,4 +69,4 @@ Items that do not apply to the profile are deleted when this file is created. Ea
   - [ ] no `{{` placeholders and no `TODO(describe)` markers remain
 - [ ] Every critical and high finding resolved; this file deleted; commit `chore(scaffold): delivery, docs and verification`
 - [ ] With the user's approval: create the remote repository, push, and apply branch protection (or hand over the exact settings)
-- [ ] Report: structure, commands, scan results, contrast report, launch checklist, and the proposed first features, starting with authentication
+- [ ] Report: structure, commands, scan results, contrast report, launch checklist, and the first ready feature in `docs/ROADMAP.md`

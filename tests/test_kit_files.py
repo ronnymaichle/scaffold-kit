@@ -31,6 +31,21 @@ class KitFileTests(unittest.TestCase):
                 with self.subTest(reference=path.name, doc=doc):
                     self.assertTrue(f"`{doc}`" in progress, f"{doc} is in no scaffold checkpoint, so a new project never gets it")
 
+    def test_scaffold_progress_creates_the_doc_templates(self):
+        progress = (KIT / "templates" / "SCAFFOLD-PROGRESS.md").read_text(encoding="utf-8")
+        for name in ("LAUNCH-CHECKLIST.md", "ROADMAP.md"):
+            with self.subTest(template=name):
+                self.assertTrue((KIT / "templates" / name).is_file())
+                self.assertIn(f"`docs/{name}`", progress)
+
+    def test_roadmap_rows_link_to_their_prs(self):
+        roadmap = (KIT / "templates" / "ROADMAP.md").read_text(encoding="utf-8")
+        self.assertIn("| ID | Feature: what a user can do afterwards | Depends on | Status |", roadmap)
+        self.assertRegex(roadmap, r"\n\| R1 \| \{\{FEATURES:[^{}]*\}\} \|")
+        self.assertIn("done (#14)", roadmap)
+        pr_template = (KIT / "templates" / "github" / "pull_request_template.md").read_text(encoding="utf-8")
+        self.assertIn("\nRoadmap: ", pr_template)
+
     def test_root_template_stays_short_and_has_the_workflows(self):
         text = (KIT / "templates" / "CLAUDE.md").read_text(encoding="utf-8")
         self.assertLess(len(text.splitlines()), 200, "leave room for project-specific lines (limit ~300)")
@@ -45,7 +60,7 @@ class KitFileTests(unittest.TestCase):
             "docs/security/findings.md", "docs/PRIVACY.md", "docs/DEPLOYMENT.md", "docs/SCALING.md",
             "docs/OPERATIONS.md", "docs/DESIGN.md", "docs/SEO.md", "docs/ANALYTICS.md",
             "docs/LOGGING.md", "docs/TESTING.md", "docs/SOURCES.md", "docs/CODEMAP.md", "docs/LAUNCH-CHECKLIST.md",
-            "docs/SCAFFOLD-PROGRESS.md", "docs/UPGRADE-PLAN.md", "docs/AGENT-TEAM.md",
+            "docs/SCAFFOLD-PROGRESS.md", "docs/UPGRADE-PLAN.md", "docs/AGENT-TEAM.md", "docs/ROADMAP.md",
         }
         files = list((KIT / "references").glob("*.md")) + list((KIT / "templates").rglob("*.md"))
         for path in files:
