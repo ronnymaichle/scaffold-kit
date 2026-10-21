@@ -34,4 +34,4 @@ pre-commit:
 commit-msg:
   jobs:
     - name: commitlint
-      run: bunx commitlint --edit {1} # ADAPT
+      run: bunx commitlint --edit {1} # ADAPT; without Node: cz check --commit-msg-file {1} (commitizen)

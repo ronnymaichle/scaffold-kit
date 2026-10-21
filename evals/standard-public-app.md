@@ -30,7 +30,8 @@ Checks the full plan and draft for a public product: tenancy planned from the st
 - build the draft: a top-down system diagram, the main-flow sequence diagram, the data model, example payloads for the main actions, two or three color proposals for an earthy, calm look, and phone-first mockups of the main screens
 - list the features in build order in the roadmap, starting with sign-up and sign-in, each small enough for one PR
 - list the standard agent roster and the agent guardrails, with the sandbox off by default
-- say what waits for Phase 2 (the launch checklist)
+- say whether the GitHub plan gives a private repository branch protection and deploy approval, and the fallback when it does not
+- say what waits for Phase 2 (the launch checklist), with account export and deletion as roadmap rows
 
 ## The plan must not
 

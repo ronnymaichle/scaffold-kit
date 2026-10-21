@@ -146,7 +146,7 @@ The rules above apply to every client, because they run on the server. On top of
 
 ## Lean profile
 
-Everything except the notification channels: limits, quotas, spending caps, breakers, the event catalog and the client rules all apply. Alerts go by email only, for high and critical events, with no digest and no alert inbox.
+Everything except the notification channels: limits, quotas, spending caps, breakers, the event catalog and the client rules all apply. Alerts go by email only, for high and critical events, with no digest and no alert inbox; an app that sends no email to its users still sets up the mail module for them.
 
 ## Strict profile additions
 

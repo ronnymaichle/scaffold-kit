@@ -32,7 +32,7 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 - [ ] DTO pattern and type checks spanning database, server and UI; schema-drift check in `check`
 - [ ] Auth library or platform installed and configured; sign-up and sign-in are built afterwards as the first feature, through the Feature workflow
 - [ ] Roles and permissions: the permission catalog with `anonymous`, `user`, `admin` and any roles the plan adds; `can()` and the `guard()` helper for every entry point; the role assignments table; the first-admin command; the permission matrix and route coverage tests
-- [ ] Safeguards: the rate limiter and quota modules, the security event catalog with its thresholds, the audit log table, the alert module (email and the admin alert inbox), feature breakers with read-only mode, a metered module for each paid provider in the plan with the lint rule that keeps its SDK inside it, and the safeguards table with the budgets from the plan
+- [ ] Safeguards: the rate limiter and quota modules, the security event catalog with its thresholds, the audit log table, the alert module (email, and the admin alert inbox except in the lean profile), feature breakers with read-only mode, a metered module for each paid provider in the plan with the lint rule that keeps its SDK inside it, and the safeguards table with the budgets from the plan
 - [ ] Logger with redaction, `logs/dev.log` in development, error catalog, `AppError` and global error handling
 - [ ] Docs: `docs/DATABASE.md`, `docs/LOGGING.md`, `docs/PRIVACY.md` (data protection and the first data inventory), `docs/security/SAFEGUARDS.md`, the Auth (with roles and permissions), APIs and Caching sections of `docs/ARCHITECTURE.md`; ADR `0003-data-and-auth`
 - [ ] Folder docs and code map updated; `check` passes; commit `chore(scaffold): data, auth and errors`
@@ -50,20 +50,20 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 ## Checkpoint D: delivery, docs and verification
 
 - [ ] Multi-stage Dockerfile running as non-root, `.dockerignore`, docker-compose for local services
-- [ ] Scripts: `check` (format check, lint, type check including framework checks, schema drift, unit and integration tests, folder docs and code map, debug leftovers, design literals and contrast, trusted sources), `check:security` (dependency audit, gitleaks, Semgrep), `test:e2e` (with axe, SEO metadata and consent checks), `migrate`, `db:reset`, `db:seed`, `docs:codemap`, and the promote script `deploy:env` with `--dry-run`
+- [ ] Scripts, as package scripts or, in stacks without them, make targets: `check` (format check, lint, type check including framework checks, schema drift, unit and integration tests, folder docs and code map, debug leftovers, design literals and contrast, trusted sources), `check:security` (dependency audit, gitleaks, Semgrep), `test:e2e` (with axe, SEO metadata and consent checks), `migrate`, `db:reset`, `db:seed`, `docs:codemap`, and the promote script `deploy:env` with `--dry-run`
 - [ ] CI on every PR from `templates/github/workflows/ci.yml`: `check`, `check:security`, `test:e2e`, image build, PR title lint
 - [ ] Docs: `docs/DEPLOYMENT.md`, `docs/SCALING.md`, `docs/OPERATIONS.md`, `docs/LAUNCH-CHECKLIST.md`; ADR `0005-hosting`; root `SECURITY.md`, PR and issue templates, `README.md` (what it is, quick start, commands, links to the docs)
 - [ ] Verify:
   - [ ] `check`, `check:security` and the e2e smoke test pass
   - [ ] docker-compose starts; migrations apply to an empty database and the seed runs
-  - [ ] `deploy:env staging --dry-run` lists every promote step and changes nothing
+  - [ ] `deploy:env staging --dry-run` (`production --dry-run` without staging) lists every promote step and changes nothing
   - [ ] a test email lands in the local mail catcher
   - [ ] liveness and readiness respond
   - [ ] robots.txt and sitemap.xml are served, and the noindex header appears outside production
   - [ ] with the `noop` adapter there are no third-party requests and no non-necessary cookies
   - [ ] the dev design page renders in both themes, with every feedback variant
   - [ ] a test error appears in the logs with requestId and commit, and as an error toast showing the same ref
-  - [ ] a test security event past its threshold blocks the actor, reaches the admin alert inbox and the local mail catcher, and appears in the audit log
+  - [ ] a test security event past its threshold blocks the actor, reaches the local mail catcher and, except in the lean profile, the admin alert inbox, and appears in the audit log
   - [ ] a tripped breaker returns `FEATURE_DISABLED` to a user, still lets an admin through, and stays tripped until an admin resets it
   - [ ] the agent guard denies `git push --force` and a subagent's `git commit`, and asks before `gh pr merge` (`python3 scripts/quality/agent_guard.py --command`); reading `~/.ssh` is denied
   - [ ] strict profile: with the sandbox on, every command in the Commands table runs, and a request to a host outside the allowed list fails

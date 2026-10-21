@@ -29,7 +29,7 @@ Checks that a small internal tool gets the lean profile's reductions without los
 - list the lean agent roster (the lead with the `test-runner`, the `reviewer`, and the `designer` at planning time only) and the agent guardrails
 - list the features in build order in the roadmap, starting with sign-in, each small enough for one PR
 - generate one theme from `#E4572E` and recommend one look
-- stay short: one or two lines per item
+- show decisions rather than the kit's defaults: one or two lines per item, the defaults named in one line, about one screen plus the stack comparison
 
 ## The plan must not
 

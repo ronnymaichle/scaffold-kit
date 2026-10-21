@@ -38,6 +38,8 @@ LEAD_ALLOWED = [
     "gh api repos/o/r/pulls/14",
     "bun run deploy:env staging",
     "bun run deploy:env production --dry-run",
+    "make deploy-env ENV=production DRY_RUN=1",
+    "make deploy-env ENV=staging",
     "python3 scripts/quality/folder_docs.py init",
     "echo 'git push --force'",
     "grep -rn 'reset --hard' docs",
@@ -95,6 +97,8 @@ LEAD_ASKED = [
     ("bun run deploy:env production", "production"),
     ("npm run deploy:env -- production", "production"),
     ("./scripts/deploy/promote.sh production", "production"),
+    ("make deploy-env ENV=production", "production"),
+    ("ENV=production make deploy-env", "production"),
 ]
 
 SUBAGENT_ALLOWED = [
@@ -138,6 +142,7 @@ SUBAGENT_DENIED = [
     ("gh pr merge 1", "Only the lead"),
     ("gh api repos/o/r/pulls", "Only the lead"),
     ("bun run deploy:env staging", "Only the lead"),
+    ("make deploy-env ENV=staging", "Only the lead"),
 ]
 
 

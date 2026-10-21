@@ -6,13 +6,28 @@ Becomes `docs/ARCHITECTURE.md`, together with the auth, API and caching sections
 
 Use the framework's own conventions: its tooling, documentation and community answers are built around them. Start as a modular monolith: one deployable app, split internally by domain (markers, comments, accounts). Add a layer only when it removes real duplication or makes testing possible.
 
+### Choosing the framework (scaffold-time)
+
+Recommend a primary option and a runner-up from this table, or check the user's own choice against it. Check current versions, support windows and advisories in the trusted sources first (`docs/SOURCES.md`).
+
+| Framework | Good fit | Watch out for |
+|---|---|---|
+| SvelteKit (TypeScript) | Full-stack web apps built from forms and lists; small teams; light pages on phones; form actions that work before JavaScript loads | A smaller ecosystem and hiring pool; AI tools sometimes write older Svelte syntax, a trap the stack-conventions skill lists |
+| Next.js (TypeScript, React) | Teams that know React; the largest component ecosystem; static and server rendering for public pages | More to protect: every Server Action is a public endpoint, and `proxy.ts` is never the only access check (`docs/security/SAFEGUARDS.md`); several caching layers to learn; some features assume Vercel when self-hosted |
+| Django (Python) | Teams that know Python; apps made of forms, lists and admin work, with auth, ORM, migrations and forms built in | Pages are server-rendered, so rich interaction needs HTMX or a separate frontend; its admin site is a second permission system, kept in step with the catalog or left out |
+| FastAPI (Python) | JSON APIs for a mobile app or a separate frontend, typed with Pydantic | API only: pages need a separate frontend, and auth and admin are assembled from libraries |
+| Hono or Elysia (TypeScript) | Small, fast JSON APIs and workers | API only, with few conventions, so the project makes more decisions itself |
+| Go | Long-running, high-throughput services in small images | More code for plain create, read, update and delete work, and few full-stack conventions |
+
 ### Structure by stack (scaffold-time)
 
 | Stack | Structure | Tests | Logger |
 |---|---|---|---|
 | SvelteKit (TypeScript) | Thin routes (`+page.server.ts` load and actions; `+server.ts` only for client-fetched JSON) -> `$lib/server/services` (business logic) -> `$lib/server/repositories` (database access). Validation schemas in `$lib/schemas` (Valibot or Zod). UI in `$lib/components`. Svelte 5 runes for state. | Vitest for services, utilities and components, integration tests for repositories against a real database in Docker, Playwright for critical flows | pino |
-| Hono or Elysia API | routes -> services -> repositories; schema validation at the routes | bun test, integration tests against a real database | pino |
-| Python FastAPI | routers -> services -> repositories; Pydantic models | pytest with httpx, real database in Docker | structlog |
+| Next.js (TypeScript, App Router) | Thin entry points (Server Components that read data, Server Actions, and Route Handlers in `route.ts` only for client-fetched JSON) -> `src/server/services` (business logic) -> `src/server/repositories` (database access), every server module starting with `import 'server-only'`. Validation schemas in `src/lib/schemas` (Zod or Valibot). UI in `src/components`, with `'use client'` only where interaction needs it. `proxy.ts` only for coarse checks such as redirects and rate limits. | Vitest with Testing Library for services, utilities and components, integration tests for repositories against a real database in Docker, Playwright for critical flows | pino |
+| Django (Python) | A settings package plus one app per domain: thin views (Django REST Framework views for JSON) -> `services.py` (business logic using the ORM directly; a separate query module only when queries repeat); models and migrations in each app. Forms or serializers validate input. Templates for pages, HTMX where a page needs interaction. | pytest with pytest-django and factory_boy, integration tests against a real database in Docker, Playwright for Python for critical flows | structlog |
+| Hono or Elysia (TypeScript API) | routes -> services -> repositories; schema validation at the routes | bun test, integration tests against a real database | pino |
+| FastAPI (Python) | routers -> services -> repositories; Pydantic models | pytest with httpx, real database in Docker | structlog |
 | Go | `cmd/<app>`, `internal/<domain>/{handler,service,store}` | go test, table-driven, real database in Docker | log/slog |
 | Anything else | Research the framework's official conventions first and follow them | The ecosystem's standard runner | The ecosystem's standard structured logger |
 

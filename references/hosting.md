@@ -31,7 +31,7 @@ Whatever the option, the app ships as one image built from the Dockerfile that r
 
 ## Promoting to a hosted environment
 
-Development runs locally (`docs/DATABASE.md`). One command takes what the repository defines to a hosted environment, the first time and every time after: `deploy:env <staging|production>`, a package script that calls `scripts/deploy/promote.sh` or its equivalent.
+Development runs locally (`docs/DATABASE.md`). One command takes what the repository defines to a hosted environment, the first time and every time after: `deploy:env <staging|production>`, a package script (or a make target such as `make deploy-env ENV=production` in stacks without package scripts) that calls `scripts/deploy/promote.sh` or its equivalent.
 
 - It is idempotent and has a `--dry-run` that prints what would change. It stops at the first failure and runs in this order: validate the target's environment variables against the startup schema; print the target project and environment and require confirmation (CI approval for production); check for schema drift; apply migrations; deploy access rules and platform configuration; set secrets; deploy functions and workers; roll out the app image; run the smoke test.
 - Only schema, rules, configuration and code move. Development data never does: a hosted environment starts empty or with reference data (for example countries or categories) from a separate seed that is safe for production.
@@ -53,7 +53,7 @@ Ask whether staging is wanted. For a solo developer on one server, staging can b
 
 ## Deploys and rollback
 
-- Pipelines (Phase 2): staging on every merge to `main`; production on `v*` tags, with manual approval through CI environments with required reviewers or the host's equivalent.
+- Pipelines (Phase 2): staging on every merge to `main`; production on `v*` tags, with manual approval through CI environments with required reviewers or the host's equivalent (where the plan has neither, as on GitHub Free with a private repository, a manually started workflow on the tag; `CONTRIBUTING.md`).
 - Migrations run as a separate release step (a one-off container from the new image) before the rollout, never on instance start; they are backward compatible (Scale-ready rules).
 - Rollouts avoid downtime where the host allows: start the new containers, wait for readiness, then stop the old ones.
 - Rollback: redeploy the previous tag's image. The previous version runs on the new schema because migrations are backward compatible; never reverse a migration by hand without a tested restore plan.

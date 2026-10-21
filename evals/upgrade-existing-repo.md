@@ -13,7 +13,8 @@ Checks upgrade mode on a small repository with real problems: a paid AI endpoint
 
 - stay read-only: no edits, installs, commits or pushes in `<RUN>/project`, whose `git status` is clean at the end
 - report the critical and high findings first, each with file, line, impact and fix: the caption endpoint calls the paid AI provider without sign-in, quota or budget, and the photo delete does not check the owner
-- put spending caps first: a monthly limit at the AI provider and, because Firebase budgets only alert, a budget action or a breaker
+- ask for what the code cannot show (the monthly budget, hosting, target countries, alert recipients), writing each question into the plan with the recommended answer
+- put the console steps first, before any PR: a monthly limit at the AI provider and a Firebase budget, with a budget action or a breaker planned because Firebase budgets only alert
 - run the kit's checks from the kit folder against the project with `python3 -B`, and list gitleaks and the dependency audit as missing when they are not installed
 - note that `.env` files are not in `.gitignore`
 - keep Next.js and Firebase, recording kept conventions in ADRs instead of switching

@@ -17,7 +17,7 @@ Alternative: Git Flow (`develop` plus `release/*` branches) only for scheduled r
 
 Small PRs get better reviews, from people and from the `reviewer` agent alike, are easier to roll back, and keep `git bisect` precise.
 
-- A PR changes at most about 400 lines and 10 files of source code; tests, docs, generated migrations and lockfiles are not counted.
+- A PR changes at most about 400 lines and 10 files of source code; tests, docs, generated files (migrations, lockfiles, the code map) and vendored folders such as `scripts/quality/` are not counted.
 - A bigger feature is split into parts before work starts, and the user approves the split. Each part is its own branch and PR, passes `check`, can be merged and deployed alone, and gets its own row in `docs/ROADMAP.md`.
 - Split by what a user can do, so each part can be tried: create before list, edit and delete; reading before writing. Do not split by layer (the database, then the server, then the screens): no part could be tested end to end, and each would merge code that nothing uses yet. Each part carries the migration it needs.
 - A part users should not see yet merges behind a release flag, and the last part removes the flag.
@@ -49,7 +49,7 @@ Small PRs get better reviews, from people and from the `reviewer` agent alike, a
 
 - Conventional Commits with the standard types only: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`, `chore`, `revert`, and `style` for code formatting only (never for visual changes). The area goes in the scope: `fix(security): ...`, `feat(seo): ...`, `feat(theme): ...`, `feat(analytics): ...`, `feat(db): ...`, `fix(i18n): ...`, `fix(markers): ...`.
 - Format: `type(scope): imperative summary`, at most 72 characters; the body explains why; footers such as `Refs #12` and `BREAKING CHANGE: ...`.
-- commitlint with the conventional config enforces this in the commit-msg hook and on PR titles in CI.
+- commitlint with the conventional config (commitizen's `cz check` in projects without Node) enforces this in the commit-msg hook and on PR titles in CI.
 - Small logical commits are fine on a branch; the squash merge turns the PR title into the single commit on `main`.
 - Never commit secrets, generated files or temporary debug lines (`docs/LOGGING.md`).
 - Hooks are never skipped (`--no-verify`); a failing hook is fixed, not bypassed.
@@ -67,6 +67,7 @@ Applied through the host's CLI only with the user's approval; otherwise hand ove
 - `main`: PR required, required checks passing, branch up to date before merging, squash merge only, no force pushes, no deletion, conversations resolved; signed commits recommended.
 - Tags `v*` protected.
 - With more than one person: at least one approving review and CODEOWNERS.
+- On GitHub Free, a private repository has no branch protection, required reviewers or deployment protection rules; GitHub Pro adds them, and public repositories have them on every plan. Without them, CI still runs on every PR, the agent guard still keeps agents from pushing to `main` (`docs/AGENT-TEAM.md`), and production deploys run as a manually started workflow on a tag. The plan says which applies.
 
 ## Versioning and changelog
 
