@@ -58,6 +58,17 @@ class AgentTemplateTests(unittest.TestCase):
                 for word in ("Status:", "Evidence:"):
                     self.assertIn(word, text)
 
+    def test_parallel_implementers_leave_folder_docs_to_the_lead(self):
+        # folder_docs.py init rewrites every folder doc, so a parallel implementer running it clobbers the others' work.
+        text = (AGENTS / "implementer.md").read_text(encoding="utf-8")
+        steps = [s for s in re.split(r"\n(?=\d+\. )", text) if "folder_docs.py init" in s or "`init`" in s]
+        self.assertTrue(steps)
+        for step in steps:
+            with self.subTest(step=step[:40]):
+                self.assertIn("runs alone", step)
+        flow = REFERENCE.read_text(encoding="utf-8").split("## How work flows")[1].split("\n## ")[0]
+        self.assertIn("the lead runs `folder_docs.py init`", flow)
+
     def test_roster_matches_templates(self):
         self.assertEqual(roster_in_reference(), {p.stem for p in self.agent_files()})
 

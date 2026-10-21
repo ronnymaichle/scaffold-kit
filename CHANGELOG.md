@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.9.0 (2026-10-21)
+
+- Folder docs with parallel agents (`agents.md`, `implementer`): implementers running in parallel no longer edit folder `CLAUDE.md` files or run `folder_docs.py init`, which rewrites every folder doc in the project and so could overwrite another implementer's edits or add placeholder entries for its files. Each lists in its report what the files it added or changed do and export; once every slice is done, the lead runs `init` and writes the entries, before the full `check`. A slice that runs alone still updates its own folder docs. A new kit test keeps the implementer's `init` instruction tied to slices that run alone.
+- Root `CLAUDE.md` template: the Agents line says parallel slices leave folder docs to the lead.
+- Projects: in upgrade mode, update step 3 of `.claude/agents/implementer.md`, How work flows steps 4 and 6 in `docs/AGENT-TEAM.md`, and the Agents line in the root `CLAUDE.md`. Nothing else changes, and the skill needs no update.
+
 ## 2.8.0 (2026-10-21)
 
 - Roadmap: new template `templates/ROADMAP.md`, which becomes `docs/ROADMAP.md` in checkpoint A. It lists the confirmed plan's features in build order, each a thin vertical slice that fits one PR: first what others depend on, then the riskiest unknowns, then the rest by value. Rows have fixed ids (`R7`, parts `R7a`) and the statuses `planned`, `split`, `dropped` and `done (#14)`. The branch (`feat/r7-...`) and the PR description (`Roadmap: R7`) carry the id, and right after opening the PR the lead sets the row to `done (#14)`, so the row and the PR link to each other. When the user names no feature, the lead proposes the first ready row; the feature report names the next one.
