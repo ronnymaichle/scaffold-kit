@@ -5,6 +5,9 @@
       "effortLevel": "xhigh"
     }
   },
+  "env": {
+    "NO_UPDATE_NOTIFIER": "1"
+  },
   "permissions": {
     "deny": [
       "Read(~/.ssh/**)",
@@ -12,6 +15,9 @@
       "Read(~/.azure/**)",
       "Read(~/.config/gcloud/**)",
       "Read(~/.config/gh/**)",
+      "Read(~/.config/context7/**)",
+      "Read(~/.context7/**)",
+      "Read(~/.claude/.credentials.json)",
       "Read(~/.kube/**)",
       "Read(~/.docker/config.json)",
       "Read(~/.git-credentials)",

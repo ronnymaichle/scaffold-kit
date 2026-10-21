@@ -72,9 +72,9 @@ Keeps Claude Code's WebFetch allow rules in `.claude/settings.json` in step with
 Depends on: `scripts/quality/common.py`
 
 ### agent_guard.py
-Claude Code PreToolUse hook for shell commands: denies git writes by subagents, skipped hooks, plain force pushes and changes to main outside a pull request; asks the user before merges, remote repository changes, production promotes and commands that discard uncommitted work; logs each decision to `logs/agent-guard.log`.
+Claude Code PreToolUse hook for shell commands: denies git writes by subagents, skipped hooks, plain force pushes and changes to main outside a pull request; asks the user before merges, remote repository changes, production promotes and commands that discard uncommitted work. For every agent it also denies Playwright CLI commands outside the browser check's rules, shell commands naming a path in the project's Read deny rules, Keychain reads and web addresses opened in the developer's own browser, and asks before osascript and installs outside the project. Logs each decision to `logs/agent-guard.log`.
 - `main(argv=None)` -> `int`: hook mode reads the hook's JSON on stdin and prints the decision JSON; `--command CMD [--agent NAME] [--root DIR]` prints `allow`, `ask: reason` or `deny: reason` and exits 1 unless allowed
-- `decide(command, agent=None, root=None)` -> `tuple[str, str]`: ("allow", "ask" or "deny", reason); agent names the subagent, None for the lead; unreadable git commands are denied
+- `decide(command, agent=None, root=None, project=None)` -> `tuple[str, str]`: ("allow", "ask" or "deny", reason); agent names the subagent, None for the lead; root is the working directory and project the root whose `.claude/settings.json` holds the Read deny rules (default: root); unreadable commands it covers are denied
 
 ## Conventions
 - Each script runs on its own (`python3 scripts/quality/<script>.py --help`) and imports only these modules and the standard library.

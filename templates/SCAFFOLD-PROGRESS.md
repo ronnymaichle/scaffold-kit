@@ -18,7 +18,7 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 - [ ] Tooling: formatter; linter with the ecosystem's security rules and a ban on `console.*` outside the logger; strict type checking; module-boundary lint rule; test runners; commitlint; git hooks from `templates/lefthook.yml`, each command checked against the installed tool's `--help`; package manager hardening (frozen installs, a minimum release age, install scripts only for trusted packages)
 - [ ] Structure (only the folders the first features need), environment validation at startup, liveness and readiness endpoints, graceful shutdown, security headers, same-origin CORS, and the client IP read only from the trusted proxy's header
 - [ ] `.claude/settings.json` and `.claude/agents/` from the kit's `templates/claude/`, keeping the agents the profile needs (`docs/AGENT-TEAM.md`); the settings keep the guard hook and the deny rules, and the strict profile adds the sandbox block, the Docker Compose allow rules and the bypass lock, with the sandbox exclusions taken from the Commands table; `.claude/skills/stack-conventions/SKILL.md` written from the official docs for the installed versions, each entry with its source and date, and those pages added to `docs/SOURCES.md`
-- [ ] `.gitignore` (including `.env`, `logs/`, `.claude/plan.md`), `.gitattributes`, `.editorconfig`, `.env.example` with placeholders
+- [ ] `.gitignore` (including `.env`, `logs/`, `.claude/plan.md`, `.playwright-cli/`), `.gitattributes`, `.editorconfig`, `.env.example` with placeholders; `.env` gets a random `DEV_SEED_PASSWORD` (for example `openssl rand -base64 24`)
 - [ ] For apps with screens: `docs/mockups/` from the approved draft, with only its screens and the approved theme left, and that theme's CSS file next to it
 - [ ] Docs: `CONTRIBUTING.md` (git workflow and folder docs), `docs/ARCHITECTURE.md` (the approved diagrams, and the payloads under Planned actions), `docs/ROADMAP.md` from the template (the confirmed plan's features in build order), `docs/AGENT-METRICS.md` from the template (the empty scorecard), `docs/TESTING.md`, `docs/AGENT-TEAM.md`, `docs/security/THREAT-MODEL.md`, `docs/security/findings.md`; ADRs `0001-stack` and `0002-branching`
 - [ ] Folder docs created with `folder_docs.py init`, every `TODO(describe)` replaced, code map generated
@@ -26,7 +26,7 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 
 ## Checkpoint B: data, auth and errors
 
-- [ ] Database in docker-compose with production's version and extensions, or the platform's local stack; ORM and the first migration, from the approved data model; `migrate`, `db:reset` and `db:seed` with realistic fake data; a separate test database; no hosted project used for development
+- [ ] Database in docker-compose with production's version and extensions, or the platform's local stack; ORM and the first migration, from the approved data model; `migrate`, `db:reset` and `db:seed` with realistic fake data and one development account per role (`docs/DATABASE.md`); a separate test database; no hosted project used for development
 - [ ] Mail module with a local mail catcher (for example Mailpit) in docker-compose
 - [ ] Public apps: versioned legal documents and the append-only terms-acceptance table; the acceptance step itself is built with sign-up
 - [ ] DTO pattern and type checks spanning database, server and UI; schema-drift check in `check`
@@ -44,6 +44,7 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 - [ ] Shared head component, robots.txt and sitemap.xml routes, noindex outside production
 - [ ] Analytics module with the `noop` adapter and the event catalog; consent state, necessary only, with the banner hidden until a non-necessary adapter is enabled (not in the lean profile)
 - [ ] i18n, if two or more languages are planned
+- [ ] Apps with screens: the browser check (`docs/TESTING.md`): `@playwright/cli` as a development dependency pinned to an exact version (it needs Node 20 or newer, which stacks without Node install for it), its vendor skill not installed, `.playwright/cli.config.json` allowing only the local app's origin, and the Commands table row running the project's own copy; the dev server listens on 127.0.0.1 only
 - [ ] Docs: `docs/DESIGN.md` (source colors, rationale, the look, contrast table), `docs/SEO.md`, `docs/ANALYTICS.md`, the cookie consent section of `docs/PRIVACY.md`; ADR `0004-design-system`
 - [ ] Folder docs and code map updated; `check` passes; commit `chore(scaffold): interface and public web`
 
@@ -65,7 +66,8 @@ Items that do not apply to the profile are deleted when this file is created. Ea
   - [ ] a test error appears in the logs with requestId and commit, and as an error toast showing the same ref
   - [ ] a test security event past its threshold blocks the actor, reaches the local mail catcher and, except in the lean profile, the admin alert inbox, and appears in the audit log
   - [ ] a tripped breaker returns `FEATURE_DISABLED` to a user, still lets an admin through, and stays tripped until an admin resets it
-  - [ ] the agent guard denies `git push --force` and a subagent's `git commit`, and asks before `gh pr merge` (`python3 scripts/quality/agent_guard.py --command`); reading `~/.ssh` is denied
+  - [ ] the agent guard denies `git push --force` and a subagent's `git commit`, and asks before `gh pr merge` (`python3 scripts/quality/agent_guard.py --command`); reading `~/.ssh` is denied, also as `cat ~/.ssh/id_ed25519`, and so are `playwright-cli open https://example.com` and `security find-generic-password`
+  - [ ] apps with screens: the `test-runner` signs in as a seeded account through the browser check and returns a screenshot of the main screen; the app does not answer on the machine's network address, only on 127.0.0.1
   - [ ] strict profile: with the sandbox on, every command in the Commands table runs, and a request to a host outside the allowed list fails
   - [ ] every rule from the kit references that applies to this profile is in its mapped file
   - [ ] no `{{` placeholders and no `TODO(describe)` markers remain

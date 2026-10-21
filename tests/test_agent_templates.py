@@ -72,6 +72,16 @@ class AgentTemplateTests(unittest.TestCase):
         flow = REFERENCE.read_text(encoding="utf-8").split("## How work flows")[1].split("\n## ")[0]
         self.assertIn("the lead runs `folder_docs.py init`", flow)
 
+    def test_browser_agents_follow_the_testing_rules(self):
+        # The test-runner checks changes in the browser and the designer takes screenshots, both by docs/TESTING.md.
+        testing = (KIT / "references" / "testing.md").read_text(encoding="utf-8")
+        self.assertIn("## Browser checks by agents", testing)
+        for name in ("test-runner", "designer"):
+            with self.subTest(agent=name):
+                text = (AGENTS / f"{name}.md").read_text(encoding="utf-8")
+                self.assertIn("Browser checks by agents", text)
+                self.assertIn("playwright-cli", text)
+
     def test_roster_matches_templates(self):
         self.assertEqual(roster_in_reference(), {p.stem for p in self.agent_files()})
 
@@ -113,8 +123,14 @@ class AgentTemplateTests(unittest.TestCase):
         self.assertTrue(any("/scripts/quality/agent_guard.py" in c for c in commands), "the guard runs before every shell command")
         self.assertTrue((KIT / "scripts" / "quality" / "agent_guard.py").is_file())
         deny = settings.get("permissions", {}).get("deny", [])
-        for rule in ("Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(*.pem)", "Read(*.key)"):
+        for rule in (
+            "Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(*.pem)", "Read(*.key)",
+            # Context7's CLI keeps its key here, and Claude Code its login when the Keychain is not used.
+            "Read(~/.config/context7/**)", "Read(~/.context7/**)", "Read(~/.claude/.credentials.json)",
+        ):
             self.assertIn(rule, deny)
+        # The browser CLI's update notice tells the reader to install @latest globally; agents must not see it.
+        self.assertEqual(settings.get("env", {}).get("NO_UPDATE_NOTIFIER"), "1")
         # The sandbox and the bypass lock are strict additions written at scaffold time
         # (references/agents.md): the sandbox gets in the way of Docker and local services.
         self.assertNotIn("sandbox", settings)

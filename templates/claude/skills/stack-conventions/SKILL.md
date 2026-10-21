@@ -15,6 +15,8 @@ Architecture, data, security and design rules live in `docs/` and the root `CLAU
 |---|---|---|---|
 | {{NAME}} | {{VERSION}} | {{END_OF_SUPPORT}} | {{YYYY-MM-DD}} |
 
+When the developer uses Context7 (`docs/AGENT-TEAM.md`), each library's Context7 ID, the official repository's and never a fork's, is added after its version, so a lookup takes one call.
+
 ## Conventional and recommended
 
 One row per topic where the version in use has a preferred way: for example project structure, data loading, forms and mutations, state, routing, styling, error handling, async work, testing. When the long-established way and the currently recommended way differ, both are named and the project's choice links its ADR.

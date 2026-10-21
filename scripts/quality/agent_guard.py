@@ -15,6 +15,19 @@ after reading a prompt injection, explaining each decision:
          without --dry-run, and commands that discard uncommitted work across
          the tree (git reset --hard, git clean -f, git checkout or restore .)
 
+For every agent, the lead included, it also guards the machine:
+
+  deny   the Playwright CLI (playwright-cli) outside the browser check's rules:
+         a page other than the local app, a command outside the page commands
+         (attach, show, run-code, install and so on), a saved profile, another
+         config file or PLAYWRIGHT_* settings, files outside the project, and
+         npx, bunx or dlx, which can download a different package; shell
+         commands that name a path in the project's Read deny rules
+         (.claude/settings.json); Keychain reads; web addresses opened in the
+         developer's own browser (open, xdg-open)
+  ask    osascript and installs outside the project (npm -g, brew install,
+         pipx and so on); both are denied for subagents
+
 Each deny and ask is appended to logs/agent-guard.log. The guard reads the
 command text, so it is a seatbelt, not a security boundary: branch protection
 and CI on the git host are, and in the strict profile the sandbox.
@@ -28,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import fnmatch
 import json
 import os
 import re
@@ -35,6 +49,7 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 __all__ = ["main", "decide"]
 
@@ -58,6 +73,34 @@ REPO = "Creating, changing or deleting the remote repository needs the user's ap
 API = "Changing the git host through its API (for example branch protection) needs the user's approval."
 PROD = "Promoting to production needs the user's approval (Release workflow); run it with --dry-run first."
 PARSE = "agent_guard could not read this command, so it is blocked; split it into plain commands."
+BROWSER_ORIGIN = "The browser check opens only the local app (localhost, *.localhost or 127.0.0.1), never staging, production or other sites (docs/TESTING.md)."
+BROWSER_COMMAND = (
+    "The browser check uses the page commands only (docs/TESTING.md): no attaching to other browsers, "
+    "dashboards, run-code scripts or installs; a check worth repeating becomes an end-to-end test."
+)
+BROWSER_PROFILE = (
+    "The browser runs with a fresh in-memory profile and the project's .playwright/cli.config.json: "
+    "no saved profiles, other config files or PLAYWRIGHT_* settings."
+)
+BROWSER_FILE = "Uploads and saved browser state stay inside the project folder."
+BROWSER_DOWNLOAD = (
+    "Run the project's own copy of the browser CLI (the Commands table in CLAUDE.md): "
+    "npx, bunx and dlx can download a different package."
+)
+KEYCHAIN = "The Keychain holds the developer's logins, Claude Code's included: agents never read, unlock or share it."
+OPEN_URL = (
+    "Agents never open web addresses in your own browser, which holds your signed-in sessions; "
+    "the browser check uses the project's browser CLI on the local app (docs/TESTING.md)."
+)
+OSASCRIPT = "osascript can control other apps, including your own browser and its signed-in sessions, so it needs the user's approval."
+SYSTEM_INSTALL = (
+    "Installing tools outside the project needs the user's approval; "
+    "project dependencies go through the lockfile and the dependency rules (docs/ARCHITECTURE.md)."
+)
+CREDENTIALS = (
+    "Files that hold keys and logins are never read by agents, through any tool "
+    "(the Read deny rules in .claude/settings.json; docs/AGENT-TEAM.md)."
+)
 
 _PROTECTED = {"main", "master"}
 _SEPARATOR = set("();|&")
@@ -107,13 +150,50 @@ _GH_ASK = {
     ("repo", "rename"): REPO, ("repo", "archive"): REPO, ("release", "delete"): REPO,
 }
 
+# Playwright CLI commands the browser check may use. Anything else, including commands a newer
+# version adds, is denied until it is reviewed here.
+_BROWSER_COMMANDS = {
+    "open", "close", "goto", "type", "click", "dblclick", "fill", "drag", "drop", "hover", "select", "upload",
+    "check", "uncheck", "snapshot", "find", "eval", "dialog-accept", "dialog-dismiss", "resize", "delete-data",
+    "go-back", "go-forward", "reload", "press", "keydown", "keyup", "mousemove", "mousedown", "mouseup",
+    "mousewheel", "screenshot", "pdf", "tab-list", "tab-new", "tab-close", "tab-select", "state-load",
+    "state-save", "cookie-list", "cookie-get", "cookie-set", "cookie-delete", "cookie-clear",
+    "localstorage-list", "localstorage-get", "localstorage-set", "localstorage-delete", "localstorage-clear",
+    "sessionstorage-list", "sessionstorage-get", "sessionstorage-set", "sessionstorage-delete",
+    "sessionstorage-clear", "set-color-scheme", "set-reduced-motion", "set-forced-colors", "set-contrast",
+    "set-media", "clear-color-scheme", "clear-reduced-motion", "clear-forced-colors", "clear-contrast",
+    "clear-media", "requests", "request", "request-headers", "request-body", "response-headers",
+    "response-body", "route", "route-list", "unroute", "network-state-set", "console", "tracing-start",
+    "tracing-stop", "video-start", "video-stop", "video-chapter", "video-show-actions", "video-hide-actions",
+    "generate-locator", "highlight", "list", "close-all", "kill-all", "config-print",
+}
+_BROWSER_NAVIGATE = {"open", "goto", "tab-new"}
+_BROWSER_FILES = {"upload", "state-load", "state-save"}
+_BROWSER_BOOLEAN = {
+    "headed", "mobile", "persistent", "submit", "boxes", "clear", "full-page", "hires", "httpOnly", "secure",
+    "static", "global", "with-deps", "dry-run", "list", "force", "only-shell", "no-shell", "cursor", "annotate",
+    "kill", "hide", "all", "json", "raw", "version",
+}
+_BROWSER_DENIED_FLAGS = {"persistent", "profile", "config", "cdp", "endpoint", "extension"}
+_LAUNCHERS = {"npx", "bunx", "pnpx", "pnpm", "npm", "yarn", "bun"}
+_LAUNCHER_STEPS = {"exec", "x", "dlx", "run"}
+_LOCAL_HOSTS = {"localhost", "::1"}
+_KEYCHAIN = {"find-generic-password", "find-internet-password", "dump-keychain", "export", "unlock-keychain"}
+_URL = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]+:")
+_PATHS = re.compile(r"(?:~|\$\{?HOME\}?)?/[^\s'\"`()<>|;&,]+")
 
-def decide(command, agent=None, root=None):
-    """("allow" | "ask" | "deny", reason) for a shell command; agent names the subagent, None for the lead."""
+
+def decide(command, agent=None, root=None, project=None):
+    """("allow" | "ask" | "deny", reason) for a shell command.
+
+    agent names the subagent, None for the lead; root is the command's working directory and
+    project the project root, whose .claude/settings.json holds the Read deny rules (default: root).
+    """
+    root = Path(root or ".")
     try:
-        results = _analyze(command, agent, Path(root or "."), 0)
+        results = _analyze(command, agent, root, Path(project or root), 0)
     except Exception:  # noqa: BLE001 - fail closed for the commands this guard covers
-        if re.search(r"\b(git|gh)\b|deploy:env|promote\.", command):
+        if re.search(r"\b(git|gh|security|osascript)\b|deploy:env|promote\.|playwright", command):
             return "deny", PARSE
         return "allow", ""
     for wanted in ("deny", "ask"):
@@ -123,15 +203,15 @@ def decide(command, agent=None, root=None):
     return "allow", ""
 
 
-def _analyze(text, agent, root, depth):
+def _analyze(text, agent, root, project, depth):
     if depth > 4:
         raise ValueError("commands nested too deeply")
     text = _strip_heredocs(text.replace("\\\n", " "))
-    results = []
+    results = _credential_reads(text, root, project) if depth == 0 else []
     for inner in _substitutions(text):
-        results += _analyze(inner, agent, root, depth + 1)
+        results += _analyze(inner, agent, root, project, depth + 1)
     for tokens in _segments(text):
-        results += _segment(tokens, agent, root, depth)
+        results += _segment(tokens, agent, root, project, depth)
     return results
 
 
@@ -182,13 +262,17 @@ def _substitutions(text):
     return found
 
 
-def _segments(text):
-    """Simple commands as token lists, split at ; && || | & ( ) and line breaks, without redirections."""
+def _tokens(text):
     lexer = shlex.shlex(text.replace("\n", " ; "), posix=True, punctuation_chars=True)
     lexer.whitespace_split = True
     lexer.commenters = ""
+    return list(lexer)
+
+
+def _segments(text):
+    """Simple commands as token lists, split at ; && || | & ( ) and line breaks, without redirections."""
     segments, current = [], []
-    for token in lexer:
+    for token in _tokens(text):
         if token and set(token) <= _SEPARATOR:
             if current:
                 segments.append(current)
@@ -234,7 +318,7 @@ def _strip_prefix(tokens):
     return env, tokens[i:]
 
 
-def _segment(tokens, agent, root, depth):
+def _segment(tokens, agent, root, project, depth):
     env, tokens = _strip_prefix(tokens)
     if not tokens:
         return []
@@ -242,9 +326,21 @@ def _segment(tokens, agent, root, depth):
     if program in _SHELLS:
         for index, arg in enumerate(args):
             if re.match(r"^-[a-z]*c[a-z]*$", arg) and index + 1 < len(args):
-                return _analyze(args[index + 1], agent, root, depth + 1)
+                return _analyze(args[index + 1], agent, root, project, depth + 1)
     if program == "eval":
-        return _analyze(" ".join(args), agent, root, depth + 1)
+        return _analyze(" ".join(args), agent, root, project, depth + 1)
+    browser = _browser_call(program, args)
+    if browser is not None:
+        return _browser(env, *browser, root, project)
+    if program == "security":
+        sub = next((a for a in args if not a.startswith("-")), "")
+        return [("deny", KEYCHAIN)] if sub in _KEYCHAIN or sub.endswith("-partition-list") else []
+    if program in ("open", "xdg-open"):
+        return [("deny", OPEN_URL)] if any(_URL.match(a) and not a.startswith("file:") for a in args) else []
+    if program == "osascript":
+        return [("deny" if agent is not None else "ask", OSASCRIPT)]
+    if _installs_outside(program, args):
+        return [("deny" if agent is not None else "ask", SYSTEM_INSTALL)]
     if any(t in _PROMOTE_NAMES or t.endswith(_PROMOTE) for t in tokens):
         if agent is not None:
             return [("deny", SUBAGENT_DEPLOY)]
@@ -482,6 +578,175 @@ def _gh(args, agent):
     return []
 
 
+def _browser_call(program, args):
+    """(downloads, the CLI's arguments) when the command runs the Playwright CLI, else None."""
+    if program in ("playwright-cli", "playwright-cli.js"):
+        return False, args
+    if program == "node" and args and os.path.basename(args[0]) in ("playwright-cli", "playwright-cli.js"):
+        return False, args[1:]
+    if program == "playwright" and args[:1] == ["cli"]:
+        return False, args[1:]
+    if program not in _LAUNCHERS:
+        return None
+    steps, previous = [], program
+    for i, arg in enumerate(args):
+        if os.path.basename(arg) == "playwright-cli" or re.match(r"^@playwright/cli(@|$)", arg):
+            downloads = program in ("npx", "bunx", "pnpx") or "dlx" in steps or "x" in steps
+            return downloads or (program == "npm" and "exec" in steps), args[i + 1:]
+        if arg == "playwright" and args[i + 1:i + 2] == ["cli"]:
+            return False, args[i + 2:]
+        if arg in _LAUNCHER_STEPS:
+            steps.append(arg)
+        elif not arg.startswith("-") and not (previous.startswith("-") and "=" not in previous):
+            return None  # another subcommand, such as npm view or pnpm add
+        previous = arg
+    return None
+
+
+def _browser(env, downloads, args, root, project):
+    results = [("deny", BROWSER_DOWNLOAD)] if downloads else []
+    if any(key.startswith("PLAYWRIGHT_") and key != "PLAYWRIGHT_CLI_SESSION" for key in env):
+        results.append(("deny", BROWSER_PROFILE))
+    flags, words = _browser_words(args)
+    if flags & _BROWSER_DENIED_FLAGS:
+        results.append(("deny", BROWSER_PROFILE))
+    if not words:
+        return results  # --help, --version
+    command, rest = words[0], words[1:]
+    if command not in _BROWSER_COMMANDS:
+        results.append(("deny", BROWSER_COMMAND))
+    elif command in _BROWSER_NAVIGATE and rest and not _local_url(rest[0]):
+        results.append(("deny", BROWSER_ORIGIN))
+    elif command in _BROWSER_FILES and not all(_inside(path, root, project) for path in rest):
+        results.append(("deny", BROWSER_FILE))
+    return results
+
+
+def _browser_words(args):
+    """(option names, positional words) of a Playwright CLI call; string options take the next word."""
+    flags, words, i = set(), [], 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "--":
+            words += args[i + 1:]
+            break
+        if arg.startswith("--"):
+            name = arg[2:].split("=", 1)[0]
+            flags.add(name)
+            if "=" not in arg and name not in _BROWSER_BOOLEAN and not name.startswith("no-"):
+                i += 1
+        elif arg.startswith("-") and len(arg) > 1:
+            flags.add(arg[1:].split("=", 1)[0])
+            if arg == "-s":
+                i += 1
+        else:
+            words.append(arg)
+        i += 1
+    return flags, words
+
+
+def _local_url(value):
+    """True for the local app: localhost, *.localhost, 127.x.x.x or ::1, a path on the current page, or a blank page."""
+    if value == "about:blank" or (value.startswith("/") and not value.startswith("//")):
+        return True
+    try:
+        parts = urlsplit(value if "://" in value else "http://" + value)
+        host = (parts.hostname or "").lower()
+    except ValueError:
+        return False
+    if parts.scheme not in ("http", "https"):
+        return False
+    return host in _LOCAL_HOSTS or host.endswith(".localhost") or re.fullmatch(r"127(?:\.\d{1,3}){3}", host) is not None
+
+
+def _expand_home(text):
+    home = os.path.expanduser("~")
+    text = re.sub(r"\$\{HOME\}|\$HOME\b", lambda _match: home, text)
+    return home + text[1:] if text == "~" or text.startswith("~/") else text
+
+
+def _absolute(path, root):
+    return os.path.abspath(os.path.join(str(root), _expand_home(path)))
+
+
+def _inside(path, root, project):
+    base = os.path.realpath(project)
+    full = os.path.realpath(_absolute(path, root))
+    return full == base or full.startswith(base + os.sep)
+
+
+def _installs_outside(program, args):
+    """True when a command installs a tool outside the project (globally or for the user)."""
+    if program.startswith("python") and args[:2] == ["-m", "pip"]:
+        program, args = "pip", args[2:]
+    words = [a for a in args if not a.startswith("-")]
+    options = set(args) | {a.split("=", 1)[0] for a in args if a.startswith("-")}
+    sub = words[0] if words else None
+    if program in ("npm", "pnpm", "bun"):
+        return sub in ("install", "i", "add") and bool({"-g", "--global", "--location=global"} & options)
+    if program == "yarn":
+        return words[:2] == ["global", "add"]
+    if program == "brew":
+        return sub in ("install", "reinstall", "upgrade", "tap")
+    if program == "pipx":
+        return sub in ("install", "inject", "upgrade", "reinstall")
+    if program == "uv":
+        return words[:2] == ["tool", "install"]
+    if program in ("pip", "pip3"):
+        return sub == "install" and bool({"--user", "--break-system-packages"} & options)
+    return False
+
+
+def _credential_reads(text, root, project):
+    """Deny a command that names a path protected by the project's Read deny rules, which cover only Claude's file tools."""
+    patterns = _read_denials(project)
+    if not patterns:
+        return []
+    for token in _tokens(text):
+        for candidate in [token] + _PATHS.findall(token):
+            if any(_protected(candidate, pattern, root, project) for pattern in patterns):
+                return [("deny", CREDENTIALS)]
+    return []
+
+
+def _read_denials(project):
+    """The paths of the Read(...) deny rules in the project's .claude/settings.json and settings.local.json."""
+    patterns = []
+    for name in ("settings.json", "settings.local.json"):
+        try:
+            data = json.loads((Path(project) / ".claude" / name).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        permissions = data.get("permissions") if isinstance(data, dict) else None
+        deny = permissions.get("deny") if isinstance(permissions, dict) else None
+        for rule in deny if isinstance(deny, list) else []:
+            match = re.fullmatch(r"Read\((.+)\)", rule) if isinstance(rule, str) else None
+            if match:
+                patterns.append(match.group(1))
+    return patterns
+
+
+def _protected(candidate, pattern, root, project):
+    """True when a path named in a command matches a Read rule: ~/x, //abs, a path from the project root, or a bare file name."""
+    if "/" not in pattern:
+        return fnmatch.fnmatchcase(os.path.basename(candidate.rstrip("/")), pattern)
+    if pattern.startswith("~/"):
+        target = os.path.join(os.path.expanduser("~"), pattern[2:])
+    elif pattern.startswith("//"):
+        target = pattern[1:]
+    else:
+        target = os.path.join(os.path.realpath(project), pattern.lstrip("/") if not pattern.startswith("./") else pattern[2:])
+    target = os.path.normpath(target)
+    path = _absolute(candidate, root)
+    for p in {path, os.path.realpath(path)}:
+        if target.endswith("/**"):
+            if p == target[:-3] or p.startswith(target[:-2]):
+                return True
+        elif fnmatch.fnmatchcase(p, target):
+            return True
+    return False
+
+
 def _redact(command):
     return _SECRET.sub(lambda m: (m.group(1) or "") + "***" + ("@" if m.group(1) else ""), command)[:500]
 
@@ -516,7 +781,7 @@ def _hook(raw, root_arg=None):
     # Claude Code sends agent_id only for commands a subagent or teammate runs.
     agent = (payload.get("agent_type") or "subagent") if payload.get("agent_id") else None
     root = Path(root_arg or os.environ.get("CLAUDE_PROJECT_DIR") or payload.get("cwd") or ".")
-    decision, reason = decide(command, agent=agent, root=Path(payload.get("cwd") or root))
+    decision, reason = decide(command, agent=agent, root=Path(payload.get("cwd") or root), project=root)
     if decision == "allow":
         return 0
     _log(root, decision, reason, command, agent)
