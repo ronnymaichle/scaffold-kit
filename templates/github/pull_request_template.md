@@ -1,5 +1,7 @@
 ## What and why
 
+Roadmap: <!-- the feature's row in docs/ROADMAP.md, for example R7, or "none" -->
+
 <!-- The change and the reason for it. Link the issue: Refs #12 -->
 
 ## How it was tested
@@ -32,6 +34,7 @@
 
 ## Checklist
 
+- [ ] Within the PR size limit in `CONTRIBUTING.md`, or a part of a split the user approved
 - [ ] Tests written first; `check` and `check:security` pass (and `test:e2e` when a flow or public route changed)
 - [ ] Folder docs and the code map updated
 - [ ] New error codes and analytics events are in their catalogs

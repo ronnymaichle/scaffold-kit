@@ -49,14 +49,15 @@ The skill is refreshed on every major upgrade of a listed framework and in the q
 
 ## How work flows
 
-1. The lead writes the plan to `.claude/plan.md` on the branch (not committed; `.claude/plan.md` is in `.gitignore`): the slices, each slice's owner and files, the acceptance checks, and a status line per slice.
+1. The lead writes the plan to `.claude/plan.md` on the branch (not committed; `.claude/plan.md` is in `.gitignore`): the slices, each slice's owner, files and check, the acceptance checks, and a status line per slice. Slices divide one PR's work between agents; a feature too big for one PR is first split into parts (`CONTRIBUTING.md`), each with its own branch and plan.
 2. The lead delegates each slice with a prompt that names the plan file and the slice. Agents start with a fresh context and do not see the lead's conversation, so the prompt and the plan file carry everything they need.
-3. Slices whose files do not overlap run in parallel; dependent slices run in order. Two agents never edit the same file.
-4. While implementers work, the lead keeps planning or reviewing; long test runs go to the `test-runner` in the background, and the lead acts on its result when the completion notice arrives.
-5. When every slice is `done`, the `reviewer` reviews the whole diff, in parallel with the `designer` when UI paths changed and, on the strict profile, the `security-auditor` when sensitive areas changed. Each reviews only its own area. Fixes go back to the slice's owner.
-6. The lead updates the plan file's status lines as reports arrive, so a resumed or compacted session continues from the file, not from memory.
+3. Slices whose files do not overlap run in parallel; dependent slices run in order. Two agents never edit the same file. A slice that changes the database schema, adds or upgrades a dependency, or changes shared configuration runs alone, before the slices that rely on it, because it changes what every other slice's tests run against.
+4. While slices run in parallel, each slice's check covers only its own files: its tests by path, the linter on its files, and the type checker's errors in its files. Project-wide commands (`check`, the full test suite, a build, `db:reset`, `test:e2e`) also read the other slices' unfinished files and would fail for reasons outside the slice, so they run only while no implementer is working.
+5. While implementers work, the lead keeps planning or reviewing; long test runs go to the `test-runner` in the background, and the lead acts on its result when the completion notice arrives.
+6. When every slice is `done`, the `test-runner` runs the full `check` once, and failures go back to the owner of the failing file. Then the `reviewer` reviews the whole diff, in parallel with the `designer` when UI paths changed and, on the strict profile, the `security-auditor` when sensitive areas changed. Each reviews only its own area. Fixes go back to the slice's owner.
+7. The lead updates the plan file's status lines as reports arrive, so a resumed or compacted session continues from the file, not from memory.
 
-Implementers work in the branch's own working tree. Worktree isolation is used only for throwaway spikes, because a worktree branches from the default branch, not from the feature branch, and would miss the slices already done.
+Implementers work in the branch's own working tree, not in worktrees. A subagent worktree starts from the default branch, or from the last commit when `worktree.baseRef` is set to `head`, so it misses the slices not yet committed (only the lead commits); it also needs its own install and environment, and its changes would have to be merged back by hand. Worktree isolation is used only for throwaway spikes.
 
 ## Communication
 
@@ -86,7 +87,7 @@ Implementers work in the branch's own working tree. Worktree isolation is used o
 
 ## Verification gates
 
-- Every slice has a check that returns pass or fail (a test, `check`, a build), and "done" means that check passed for the current commit, shown in the report's Evidence line.
+- Every slice has a check that returns pass or fail (its tests, or a lint or type check of its files; `check` or a build only for a slice that runs alone), and "done" means that check passed for the current commit, shown in the report's Evidence line.
 - The writer never grades its own work: the review is done by the `reviewer` in a fresh context.
 - Deterministic gates beat instructions: hooks in `.claude/settings.json` can block a turn or a task from finishing until `check` passes. Add one when agents report `done` without passing evidence.
 
