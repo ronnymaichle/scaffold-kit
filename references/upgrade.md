@@ -19,7 +19,7 @@ For an existing repository: applying these standards to a project that was not s
 6. After approval, the first PR saves the plan as `docs/UPGRADE-PLAN.md`; later PRs tick it off. Recommended order:
    1. Critical and high security fixes, each with a regression test, and a budget with alerts and, where offered, a hard cap on every paid provider that has none, because an uncapped bill can arrive before any other fix lands.
    2. A safety net: the root `CLAUDE.md` (merged with any existing one, never replacing what it says), `CONTRIBUTING.md`, `docs/SOURCES.md` with its WebFetch rules (merged into any existing `.claude/settings.json`), the agent guard hook and deny rules from the kit's `templates/claude/settings.json` (merged the same way), `quality.config.json`, the vendored `scripts/quality/`, hooks and CI that run what already passes, and tests around the code the next PRs touch.
-   3. Repository workflow: branch protection, commit and PR conventions, PR and issue templates, and `docs/ROADMAP.md` from the kit template with the features still planned.
+   3. Repository workflow: branch protection, commit and PR conventions, PR and issue templates, `docs/ROADMAP.md` from the kit template with the features still planned, and `docs/AGENT-METRICS.md` from the kit template.
    4. Medium security findings and the remaining defaults (headers, validation, rate limits, CORS, webhooks, supply-chain settings, environment validation), then roles and permissions, quotas, metered provider modules with breakers, the security event catalog and admin alerts (`references/safeguards.md`).
    5. Logging, the error catalog and global error handling.
    6. Folder docs, adopted folder by folder with `folderDocs.include`, starting where work happens.
