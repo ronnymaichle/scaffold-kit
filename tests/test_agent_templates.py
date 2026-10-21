@@ -103,6 +103,20 @@ class AgentTemplateTests(unittest.TestCase):
         # Agent teams are enabled per session, never for the whole project.
         self.assertNotIn("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", settings.get("env", {}))
 
+    def test_settings_guard_the_agents(self):
+        settings = json.loads(SETTINGS.read_text(encoding="utf-8"))
+        entries = settings.get("hooks", {}).get("PreToolUse", [])
+        commands = [h.get("command", "") for e in entries if e.get("matcher") == "Bash" for h in e.get("hooks", [])]
+        self.assertTrue(any("/scripts/quality/agent_guard.py" in c for c in commands), "the guard runs before every shell command")
+        self.assertTrue((KIT / "scripts" / "quality" / "agent_guard.py").is_file())
+        deny = settings.get("permissions", {}).get("deny", [])
+        for rule in ("Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(*.pem)", "Read(*.key)"):
+            self.assertIn(rule, deny)
+        # The sandbox and the bypass lock are strict additions written at scaffold time
+        # (references/agents.md): the sandbox gets in the way of Docker and local services.
+        self.assertNotIn("sandbox", settings)
+        self.assertNotIn("disableBypassPermissionsMode", settings.get("permissions", {}))
+
 
 if __name__ == "__main__":
     unittest.main()
