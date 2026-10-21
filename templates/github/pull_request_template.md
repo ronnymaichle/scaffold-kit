@@ -30,12 +30,13 @@ Roadmap: <!-- the feature's row in docs/ROADMAP.md, for example R7, or "none" --
 
 ## Screenshots
 
-<!-- UI changes: light and dark mode, mobile and desktop. -->
+<!-- UI changes: light and dark mode, mobile and desktop, from the designer's review and showing seeded data only; attach them with `gh pr create --attach` or drag them in. -->
 
 ## Checklist
 
 - [ ] Within the PR size limit in `CONTRIBUTING.md`, or a part of a split the user approved
 - [ ] Tests written first; `check` and `check:security` pass (and `test:e2e` when a flow or public route changed)
+- [ ] Changed screens, flows and public routes checked in the running app (browser check, `docs/TESTING.md`)
 - [ ] Folder docs and the code map updated
 - [ ] New error codes and analytics events are in their catalogs
 - [ ] Every user action has feedback (toast, inline error, banner or dialog)

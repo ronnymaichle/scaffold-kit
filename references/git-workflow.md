@@ -56,7 +56,7 @@ Small PRs get better reviews, from people and from the `reviewer` agent alike, a
 
 ## Pull requests
 
-- Title in Conventional Commit format. The body follows the PR template: the roadmap id; what and why; how it was tested; security and privacy notes; scalability notes; SEO notes for public routes; analytics events added or changed; database changes and migrations (backward compatible, rollback plan); screenshots in light and dark mode, mobile and desktop, for UI changes; the checklist.
+- Title in Conventional Commit format. The body follows the PR template: the roadmap id; what and why; how it was tested; security and privacy notes; scalability notes; SEO notes for public routes; analytics events added or changed; database changes and migrations (backward compatible, rollback plan); screenshots in light and dark mode, mobile and desktop, for UI changes (the designer's, attached with `gh pr create --attach` on GitHub); the checklist.
 - Required CI checks: `check`, `check:security`, `test:e2e`, image build and PR title lint; Lighthouse CI and the image scan once added in Phase 2.
 - Claude reviews its own diff before opening the PR (Feature workflow, step 8). Merging is the user's decision unless they say otherwise. The branch is deleted after merge.
 

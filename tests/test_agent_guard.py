@@ -145,6 +145,130 @@ SUBAGENT_DENIED = [
     ("make deploy-env ENV=staging", "Only the lead"),
 ]
 
+# The browser rules apply to the lead and to every subagent alike.
+BROWSER_ALLOWED = [
+    "./node_modules/.bin/playwright-cli open http://localhost:5173",
+    "./node_modules/.bin/playwright-cli goto http://127.0.0.1:5173/markers",
+    "playwright-cli -s=r7 tab-new http://app.localhost:3000",
+    "pnpm exec playwright-cli goto 'http://[::1]:8000/'",
+    "playwright-cli goto localhost:5173/sign-in",
+    "playwright-cli goto /settings",
+    "playwright-cli open",
+    "playwright-cli open --headed --mobile http://localhost:5173",
+    "playwright-cli open --browser chrome http://localhost:5173",
+    "playwright-cli click e15 && playwright-cli fill e7 'Spanish title' --submit",
+    "playwright-cli snapshot && playwright-cli console error",
+    "playwright-cli set-color-scheme dark && playwright-cli screenshot --filename=.playwright-cli/markers-dark.png",
+    "playwright-cli requests && playwright-cli response-body 3",
+    "playwright-cli state-save .playwright-cli/user.json",
+    "PLAYWRIGHT_CLI_SESSION=r7 playwright-cli snapshot",
+    "playwright-cli --help goto",
+    "playwright-cli --version",
+    "bun run playwright-cli close",
+    "npx playwright test tests/e2e/markers.spec.ts",
+    "grep -rn playwright-cli docs",
+    "echo 'playwright-cli open https://example.com'",
+]
+
+BROWSER_DENIED = [
+    ("playwright-cli open https://example.com", "local app"),
+    ("playwright-cli goto https://staging.example.com/sign-in", "local app"),
+    ("playwright-cli goto http://192.168.1.20:5173", "local app"),
+    ("playwright-cli goto example.com", "local app"),
+    ("playwright-cli goto http://localhost@evil.test/", "local app"),
+    ("playwright-cli goto http://127.0.0.1.nip.io", "local app"),
+    ("playwright-cli goto file:///etc/passwd", "local app"),
+    ("playwright-cli goto 'javascript:alert(1)'", "local app"),
+    ("playwright-cli tab-new http://localhost.evil.test", "local app"),
+    ("pnpm exec playwright-cli goto https://evil.test", "local app"),
+    ("npx playwright cli goto https://example.com", "local app"),
+    ("bash -c 'playwright-cli goto https://example.com'", "local app"),
+    ("npx playwright-cli open http://localhost:5173", "own copy"),
+    ("bunx @playwright/cli open http://localhost:5173", "own copy"),
+    ("pnpm dlx @playwright/cli@latest open", "own copy"),
+    ("npm exec playwright-cli open", "own copy"),
+    ("playwright-cli attach --extension=chrome", "page commands"),
+    ("playwright-cli attach --cdp=http://localhost:9222", "page commands"),
+    ("playwright-cli show --port 9323 --host 0.0.0.0", "page commands"),
+    ("playwright-cli run-code 'async page => page.goto(\"https://evil.test\")'", "page commands"),
+    ("playwright-cli install --skills", "page commands"),
+    ("playwright-cli install-browser chrome", "page commands"),
+    ("playwright-cli tray", "page commands"),
+    ("playwright-cli some-future-command", "page commands"),
+    ("playwright-cli open --persistent http://localhost:5173", "profile"),
+    ("playwright-cli open --profile=/tmp/chrome-profile http://localhost:5173", "profile"),
+    ("playwright-cli --config /tmp/other.json open http://localhost:5173", "profile"),
+    ("PLAYWRIGHT_MCP_CDP_ENDPOINT=http://localhost:9222 playwright-cli open", "profile"),
+    ("env PLAYWRIGHT_MCP_ALLOWED_ORIGINS='*' playwright-cli open", "profile"),
+]
+
+# macOS escape routes: the Keychain and the developer's own browser.
+MAC_DENIED = [
+    ("security find-generic-password -s 'Claude Code-credentials' -w", "Keychain"),
+    ("/usr/bin/security find-internet-password -s github.com -g", "Keychain"),
+    ("security dump-keychain -d login.keychain", "Keychain"),
+    ("security unlock-keychain ~/Library/Keychains/login.keychain-db", "Keychain"),
+    ("security set-generic-password-partition-list -S apple-tool: -s x", "Keychain"),
+    ("open https://example.com", "your own browser"),
+    ("open -a 'Google Chrome' http://localhost:5173", "your own browser"),
+    ("xdg-open https://example.com", "your own browser"),
+    ("open 'slack://open'", "your own browser"),
+]
+
+MAC_ALLOWED = [
+    "open /tmp/plan-preview/index.html",
+    "open -a Safari docs/mockups/home.html",
+    "open file:///tmp/plan-preview/index.html",
+    "security find-certificate -a -c localhost",
+]
+
+# Asked when the lead runs them, denied for subagents.
+SYSTEM_WIDE = [
+    ("osascript -e 'tell application \"Google Chrome\" to get URL of active tab of front window'", "osascript"),
+    ("npm install -g @playwright/cli@latest", "outside the project"),
+    ("npm -g i ctx7", "outside the project"),
+    ("pnpm add --global firebase-tools", "outside the project"),
+    ("bun add -g some-tool", "outside the project"),
+    ("yarn global add some-tool", "outside the project"),
+    ("brew install gitleaks", "outside the project"),
+    ("pipx install semgrep", "outside the project"),
+    ("python3 -m pip install --user requests", "outside the project"),
+    ("uv tool install ruff", "outside the project"),
+]
+
+PROJECT_INSTALLS = [
+    "pnpm add -D @playwright/cli@0.1.22",
+    "npm install",
+    "bun install --frozen-lockfile",
+    "pip install -r requirements.txt",
+    "brew list",
+    "brew info gh",
+]
+
+# Paths in the Read deny rules of the settings template, reached through the shell.
+CREDENTIAL_READS = [
+    "cat ~/.ssh/id_ed25519",
+    "cat $HOME/.ssh/id_ed25519",
+    "cat ${HOME}/.config/context7/credentials.json",
+    "base64 < ~/.aws/credentials",
+    "cp ~/.claude/.credentials.json /tmp/x",
+    "cat ~/.docker/config.json",
+    "tar czf /tmp/k.tgz ~/.kube",
+    "cat ~/.context7/credentials.json",
+    "grep token ~/.netrc",
+    "openssl rsa -in certs/server.key -text",
+    "python3 -c \"print(open('~/.ssh/id_rsa'.replace('~', '/Users/me')).read())\"",
+    "echo $(cat ~/.git-credentials)",
+]
+
+CREDENTIAL_SAFE = [
+    "cat src/app.ts",
+    "cat .env",
+    "ls ~/.claude/projects",
+    "cat ~/.ssh_notes.txt",
+    "git log -- src/keys.ts",
+]
+
 
 class DecideTests(unittest.TestCase):
     def check(self, cases, wanted, agent=None):
@@ -180,6 +304,82 @@ class DecideTests(unittest.TestCase):
         for command in commands:
             with self.subTest(command=command):
                 self.assertEqual(agent_guard.decide(command)[0], "allow")
+
+    def test_browser_rules_apply_to_every_agent(self):
+        for agent in (None, "test-runner", "designer"):
+            self.check([(c,) for c in BROWSER_ALLOWED], "allow", agent=agent)
+            self.check(BROWSER_DENIED, "deny", agent=agent)
+
+    def test_every_browser_command_in_the_testing_rules_is_allowed(self):
+        # docs/TESTING.md shows the agents how to check a change in the browser; the guard must let those commands through.
+        text = (KIT / "references" / "testing.md").read_text(encoding="utf-8")
+        section = text.split("## Browser checks by agents")[1].split("\n## ")[0]
+        commands = re.findall(r"`(playwright-cli [^`]+)`", section)
+        self.assertTrue(commands)
+        for command in commands:
+            with self.subTest(command=command):
+                self.assertEqual(agent_guard.decide(command, agent="test-runner")[0], "allow")
+
+    def test_keychain_and_own_browser_stay_out_of_reach(self):
+        for agent in (None, "implementer"):
+            self.check(MAC_DENIED, "deny", agent=agent)
+            self.check([(c,) for c in MAC_ALLOWED], "allow", agent=agent)
+
+    def test_system_wide_changes_ask_the_user(self):
+        self.check(SYSTEM_WIDE, "ask")
+        self.check(SYSTEM_WIDE, "deny", agent="implementer")
+        self.check([(c,) for c in PROJECT_INSTALLS], "allow")
+
+
+class ProjectFileTests(unittest.TestCase):
+    def project(self, settings=True):
+        files = {"tests/fixtures/photo.jpg": "x"}
+        if settings:
+            files[".claude/settings.json"] = (KIT / "templates" / "claude" / "settings.json").read_text(encoding="utf-8")
+        p = TempProject(files)
+        p.__enter__()
+        self.addCleanup(p.__exit__, None, None, None)
+        return p
+
+    def test_browser_files_stay_inside_the_project(self):
+        p = self.project()
+        for command in (
+            f"playwright-cli upload {p.root}/tests/fixtures/photo.jpg",
+            "playwright-cli state-load .playwright-cli/user.json",
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(agent_guard.decide(command, root=p.root)[0], "allow")
+        for command in (
+            "playwright-cli upload /etc/hosts",
+            f"playwright-cli upload {p.root}/../passport.pdf",
+            "playwright-cli state-load /tmp/real-session.json",
+            "playwright-cli state-save ~/session.json",
+        ):
+            with self.subTest(command=command):
+                decision, reason = agent_guard.decide(command, root=p.root)
+                self.assertEqual(decision, "deny")
+                self.assertIn("inside the project", reason)
+
+    def test_shell_reads_of_deny_listed_paths_are_denied(self):
+        p = self.project()
+        home = os.path.expanduser("~")
+        for agent in (None, "implementer"):
+            around = os.path.relpath(os.path.join(home, ".aws", "config"), p.root)
+            for command in CREDENTIAL_READS + [f"cat {home}/.ssh/id_rsa", f"cat {around}"]:
+                with self.subTest(command=command, agent=agent):
+                    decision, reason = agent_guard.decide(command, agent=agent, root=p.root)
+                    self.assertEqual(decision, "deny")
+                    self.assertIn("keys and logins", reason)
+            for command in CREDENTIAL_SAFE:
+                with self.subTest(command=command, agent=agent):
+                    self.assertEqual(agent_guard.decide(command, agent=agent, root=p.root)[0], "allow")
+
+    def test_the_deny_list_comes_from_the_project_settings(self):
+        p = self.project(settings=False)
+        self.assertEqual(agent_guard.decide("cat ~/.ssh/id_ed25519", root=p.root)[0], "allow")
+        p.write(".claude/settings.json", json.dumps({"permissions": {"deny": ["Read(~/.secrets/**)", "Bash(rm -rf *)"]}}))
+        self.assertEqual(agent_guard.decide("cat ~/.secrets/token", root=p.root)[0], "deny")
+        self.assertEqual(agent_guard.decide("cat ~/.ssh/id_ed25519", root=p.root)[0], "allow")
 
 
 @unittest.skipUnless(HAS_GIT, "git is not installed")
@@ -237,6 +437,14 @@ class HookTests(unittest.TestCase):
             self.assertEqual((entry["decision"], entry["agent"]), ("deny", "implementer"))
             self.assertNotIn(token, entry["command"])
             self.assertRegex(entry["time"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+
+    def test_the_hook_reads_the_deny_list_of_the_project(self):
+        settings = (KIT / "templates" / "claude" / "settings.json").read_text(encoding="utf-8")
+        with TempProject({".claude/settings.json": settings, "src/.keep": ""}) as p:
+            payload = {"tool_name": "Bash", "cwd": str(p.root / "src"), "tool_input": {"command": "cat ~/.ssh/id_ed25519"}}
+            out = json.loads(self.run_hook(payload, p.root).stdout)["hookSpecificOutput"]
+            self.assertEqual(out["permissionDecision"], "deny")
+            self.assertIn("keys and logins", out["permissionDecisionReason"])
 
     def test_ask_goes_to_the_user(self):
         with TempProject() as p:
