@@ -17,7 +17,7 @@ Items that do not apply to the profile are deleted when this file is created. Ea
 - [ ] `scripts/quality/` copied from the kit unchanged; `quality.config.json` from the template, with the theme file path and any extra excludes set
 - [ ] Tooling: formatter; linter with the ecosystem's security rules and a ban on `console.*` outside the logger; strict type checking; module-boundary lint rule; test runners; commitlint; git hooks from `templates/lefthook.yml`, each command checked against the installed tool's `--help`; package manager hardening (frozen installs, a minimum release age, install scripts only for trusted packages)
 - [ ] Structure (only the folders the first features need), environment validation at startup, liveness and readiness endpoints, graceful shutdown, security headers, same-origin CORS, and the client IP read only from the trusted proxy's header
-- [ ] `.claude/settings.json` and `.claude/agents/` from the kit's `templates/claude/`, keeping the agents the profile needs (`docs/AGENT-TEAM.md`); `.claude/skills/stack-conventions/SKILL.md` written from the official docs for the installed versions, each entry with its source and date, and those pages added to `docs/SOURCES.md`
+- [ ] `.claude/settings.json` and `.claude/agents/` from the kit's `templates/claude/`, keeping the agents the profile needs (`docs/AGENT-TEAM.md`); the settings keep the guard hook and the deny rules, and the strict profile adds the sandbox block, the Docker Compose allow rules and the bypass lock, with the sandbox exclusions taken from the Commands table; `.claude/skills/stack-conventions/SKILL.md` written from the official docs for the installed versions, each entry with its source and date, and those pages added to `docs/SOURCES.md`
 - [ ] `.gitignore` (including `.env`, `logs/`, `.claude/plan.md`), `.gitattributes`, `.editorconfig`, `.env.example` with placeholders
 - [ ] For apps with screens: `docs/mockups/` from the approved draft, with only its screens and the approved theme left, and that theme's CSS file next to it
 - [ ] Docs: `CONTRIBUTING.md` (git workflow and folder docs), `docs/ARCHITECTURE.md` (the approved diagrams, and the payloads under Planned actions), `docs/ROADMAP.md` from the template (the confirmed plan's features in build order), `docs/TESTING.md`, `docs/AGENT-TEAM.md`, `docs/security/THREAT-MODEL.md`, `docs/security/findings.md`; ADRs `0001-stack` and `0002-branching`
@@ -65,6 +65,8 @@ Items that do not apply to the profile are deleted when this file is created. Ea
   - [ ] a test error appears in the logs with requestId and commit, and as an error toast showing the same ref
   - [ ] a test security event past its threshold blocks the actor, reaches the admin alert inbox and the local mail catcher, and appears in the audit log
   - [ ] a tripped breaker returns `FEATURE_DISABLED` to a user, still lets an admin through, and stays tripped until an admin resets it
+  - [ ] the agent guard denies `git push --force` and a subagent's `git commit`, and asks before `gh pr merge` (`python3 scripts/quality/agent_guard.py --command`); reading `~/.ssh` is denied
+  - [ ] strict profile: with the sandbox on, every command in the Commands table runs, and a request to a host outside the allowed list fails
   - [ ] every rule from the kit references that applies to this profile is in its mapped file
   - [ ] no `{{` placeholders and no `TODO(describe)` markers remain
 - [ ] Every critical and high finding resolved; this file deleted; commit `chore(scaffold): delivery, docs and verification`

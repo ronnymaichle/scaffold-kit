@@ -1,6 +1,6 @@
 # scripts/quality
 
-Purpose: Quality checks vendored from scaffold-kit (folder docs and code map, debug leftovers, design tokens and contrast, palette generation, trusted sources); Python 3.9+, standard library only.
+Purpose: Quality checks vendored from scaffold-kit (folder docs and code map, debug leftovers, design tokens and contrast, palette generation, trusted sources, the agent guard); Python 3.9+, standard library only.
 
 Do not edit these files in a project: change behaviour through `quality.config.json` at the project root, and send improvements to the kit so every project gets them. Upgrade by replacing the whole folder with the kit's newer copy.
 
@@ -70,6 +70,11 @@ Keeps Claude Code's WebFetch allow rules in `.claude/settings.json` in step with
 - `preapproved(hosts, never)` -> `list[str]`: the hosts that get an allow rule
 - `review_warning(text, today, max_days)` -> `str | None`: a warning when the "Last reviewed:" date is missing or too old
 Depends on: `scripts/quality/common.py`
+
+### agent_guard.py
+Claude Code PreToolUse hook for shell commands: denies git writes by subagents, skipped hooks, plain force pushes and changes to main outside a pull request; asks the user before merges, remote repository changes, production promotes and commands that discard uncommitted work; logs each decision to `logs/agent-guard.log`.
+- `main(argv=None)` -> `int`: hook mode reads the hook's JSON on stdin and prints the decision JSON; `--command CMD [--agent NAME] [--root DIR]` prints `allow`, `ask: reason` or `deny: reason` and exits 1 unless allowed
+- `decide(command, agent=None, root=None)` -> `tuple[str, str]`: ("allow", "ask" or "deny", reason); agent names the subagent, None for the lead; unreadable git commands are denied
 
 ## Conventions
 - Each script runs on its own (`python3 scripts/quality/<script>.py --help`) and imports only these modules and the standard library.

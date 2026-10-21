@@ -31,6 +31,7 @@ If `docs/SCAFFOLD-PROGRESS.md` exists, the scaffold is unfinished: resume at its
 | Regenerate the code map | {{CODEMAP_COMMAND}} |
 | Create or extend folder docs and their Depends on lines | `python3 scripts/quality/folder_docs.py init` |
 | What a file imports and what imports it | `python3 scripts/quality/folder_docs.py deps <file>` |
+| What the agent guard decides for a command | `python3 scripts/quality/agent_guard.py --command '<command>'` |
 
 ## Priorities
 
@@ -56,7 +57,7 @@ Each line summarizes rules that live in full in the linked file.
 - Logging and errors: one logger, never `console.*`; services throw catalogued `AppError`s; temporary debug lines carry `DEBUG-TEMP` and never get committed. `docs/LOGGING.md`
 - Tests: written first; repositories tested against a real test database; every fix gets a regression test. `docs/TESTING.md`
 - Git: one feature per branch and PR, squash-merged, built in the order of `docs/ROADMAP.md`; a PR stays within the size limit, so bigger features are split into parts, with unfinished ones behind a release flag; Conventional Commits with the area in the scope; hooks are never skipped. `CONTRIBUTING.md`
-- Agents: the main session leads on Opus at `xhigh`, plans in `.claude/plan.md` and delegates slices to the agents in `.claude/agents/`, which preload the stack conventions in `.claude/skills/stack-conventions/`; the `designer` proposes new screens and reviews UI changes; slices running in parallel check only their own files and leave folder docs to the lead, and the full `check` runs once they are all done; agents report to the lead only, in one report format, with two attempts per failure and one review round. `docs/AGENT-TEAM.md`
+- Agents: the main session leads on Opus at `xhigh`, plans in `.claude/plan.md` (one per branch) and delegates slices to the agents in `.claude/agents/`, which preload the stack conventions in `.claude/skills/stack-conventions/`; the `designer` proposes new screens and reviews UI changes; slices running in parallel check only their own files and leave folder docs to the lead, and the full `check` runs once they are all done; agents report to the lead only, in one report format, with two attempts per failure and one review round; a guard hook blocks git writes by subagents, skipped hooks, plain force pushes and changes to `main` outside a PR, and asks the user before merges, production promotes and discarding uncommitted work. `docs/AGENT-TEAM.md`
 - Operations: development runs locally and hosted environments change only through the promote script; deploys and rollback in `docs/DEPLOYMENT.md`; logs, alerts and runbooks in `docs/OPERATIONS.md`.
 
 ## Reading logs
@@ -68,6 +69,7 @@ Each line summarizes rules that live in full in the linked file.
 
 - This file stays under ~300 lines because it loads in every session. New detail goes into the mapped file, with at most a one-line pointer here.
 - One rule, one home: each rule is written once, in its file; other files link to it instead of copying it.
+- Project facts and rules live in these files, never only in Claude Code's auto memory; when the two disagree, these files win and the memory entry is corrected.
 - When a rule changes, its file changes in the same PR; this file changes only if a summary line is affected.
 - Launch tasks: `docs/LAUNCH-CHECKLIST.md`; every feature report states its progress until it is done.
 
@@ -85,7 +87,7 @@ For every feature, in order:
 8. Have the `reviewer` agent review the full diff in a fresh context (with the `designer` when UI paths changed, and on the strict profile the `security-auditor`), as an attacker, as a code reviewer, and for scale, privacy, UX and SEO: vulnerabilities, authorization gaps, entry points or costly actions without their guard, limits or breaker, logic bugs, edge cases (empty, null, huge, concurrent, unicode), race conditions (including between instances), error handling, resource leaks, N+1 or unbounded queries, missing indexes or constraints, raw rows or unsafe fields reaching the client, cache entries without invalidation, personalized responses that could be cached publicly, state that breaks with several instances, personal data exposed, missed by export and deletion, or sent in analytics events, anything non-necessary loading before consent, missing UI states or action feedback, keyboard and screen-reader gaps, contrast in both themes, mobile layout, and for public routes the rendered content, metadata, canonical URL, status codes and page weight. Use `/security-review` if available. Fix critical, high and medium findings now; list low ones as recommendations.
 9. Update the docs on the branch before committing: every affected folder `CLAUDE.md` (files, exported symbols, side effects), the code map, and as relevant `docs/DATABASE.md`, `docs/security/THREAT-MODEL.md`, `docs/security/SAFEGUARDS.md`, `docs/PRIVACY.md` (data inventory), `docs/SCALING.md`, `docs/DESIGN.md` and the dev design page, `docs/mockups/` (delete a built screen's mockup), `docs/SEO.md`, `docs/OPERATIONS.md`, `docs/ARCHITECTURE.md` (the diagrams; delete a built action's Planned actions entry), `docs/ROADMAP.md` (a split feature's parts, or a row for a feature that was not listed), or a new ADR in `docs/decisions/`. Error codes, permissions, security events and analytics events live in their catalogs in code. Keep this file under ~300 lines.
 10. Commit on the branch with a standard Conventional Commit type and the area in the scope; migrations ship in the same PR as the code that needs them. Rebase on the latest `main`, re-run `check`, push, and open a PR with the template filled in (screenshots in both themes for UI changes) and a Conventional Commit title, using the host's CLI if available. Then set the feature's row in `docs/ROADMAP.md` to `done (#<PR number>)` and push that commit to the branch.
-11. Report: branch and PR, what changed, how it was tested, threat-model risks and their handling, scalability, privacy, SEO and analytics notes, scan results, findings fixed, recommendations not yet done, launch-checklist progress, and the next ready row of `docs/ROADMAP.md`. Stop and wait. Merging is the user's decision; after a merge, delete the branch, switch to `main` and pull.
+11. Report: branch and PR, what changed, how it was tested, threat-model risks and their handling, scalability, privacy, SEO and analytics notes, scan results, findings fixed, recommendations not yet done, launch-checklist progress, and the next ready row of `docs/ROADMAP.md`. Stop and wait. Merging is the user's decision; after a merge, delete the branch and `.claude/plan.md`, switch to `main` and pull.
 
 ## Hotfix workflow
 
