@@ -6,10 +6,11 @@ Becomes `docs/PRIVACY.md`. Applies whenever the app serves people in the EU (GDP
 
 - `docs/PRIVACY.md` keeps a data inventory: which personal data is collected, why (purpose and legal basis), where it is stored, which providers process it, and how long it is kept.
 - Collect the minimum. Store EU users' personal data in an EU region: the database, backups, uploaded files and logs. A service that only passes traffic through, such as an edge proxy or CDN that terminates TLS, may be outside the EU when it is listed as a processor with a data processing agreement and a transfer basis (an adequacy decision such as the EU-US Data Privacy Framework, or standard contractual clauses), and it never caches personal data. The plan names an EU-based alternative next to it, so the user chooses knowingly. Sign data processing agreements with every provider.
-- Users can export their data and delete their account. Deletion cascades to their content, media, caches, search index and sitemap entries; backups age out according to the retention policy.
+- Users can export their data and delete their account. Deletion cascades to their content, media, caches, search index and sitemap entries; backups age out according to the retention policy. Records the law requires someone to keep (for example clinical or invoicing records) are kept for that period with access restricted, deleted when it ends, and named in the privacy notice.
 - Retention periods are defined for logs, the audit log, backups and deleted content.
 - User-generated content is public and indexable only when its owner publishes it. Precise locations are personal data: offer approximate locations where that matters. Deleted public content returns 410 and leaves the sitemap.
 - Any external service that processes personal data, including an AI service reading logs, is listed as a processor.
+- In a business-to-business app where each customer organization (a clinic, a school, an employer) decides what personal data goes in, the customer is the controller and the app its processor: a data processing agreement with each customer lists the sub-processors, the app acts only on the customer's instructions, and the customer's data is returned or deleted when the contract ends.
 
 ## Legal documents and terms
 

@@ -63,6 +63,7 @@ _PROTECTED = {"main", "master"}
 _SEPARATOR = set("();|&")
 _SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
 _PROMOTE = ("promote.sh", "promote.mjs", "promote.js", "promote.ts", "promote.py")
+_PROMOTE_NAMES = {"deploy:env", "deploy-env", "deploy_env"}  # the package script, or a make target
 _WHOLE_TREE = {".", "./", ":/", ":/.", ":/*", "*", ":(top)"}
 _HEREDOC = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
 _ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
@@ -244,10 +245,12 @@ def _segment(tokens, agent, root, depth):
                 return _analyze(args[index + 1], agent, root, depth + 1)
     if program == "eval":
         return _analyze(" ".join(args), agent, root, depth + 1)
-    if any(t == "deploy:env" or t.endswith(_PROMOTE) for t in tokens):
+    if any(t in _PROMOTE_NAMES or t.endswith(_PROMOTE) for t in tokens):
         if agent is not None:
             return [("deny", SUBAGENT_DEPLOY)]
-        if "--dry-run" not in tokens and {"production", "prod"} & set(tokens):
+        words = tokens + [f"{key}={value}" for key, value in env.items()]
+        dry = "--dry-run" in words or any(w.upper() in ("DRY_RUN=1", "DRY_RUN=TRUE") for w in words)
+        if not dry and any(w.rpartition("=")[2] in ("production", "prod") for w in words):
             return [("ask", PROD)]
         return []
     if program == "git":

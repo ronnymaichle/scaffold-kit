@@ -71,6 +71,17 @@ class KitFileTests(unittest.TestCase):
                 with self.subTest(file=path.name, ref=ref):
                     self.assertIn(ref, known)
 
+    def test_every_recommended_framework_has_a_structure_row(self):
+        text = (KIT / "references" / "architecture.md").read_text(encoding="utf-8")
+
+        def names(heading):
+            section = text.split(heading)[1].split("\n#")[0]
+            return {n.split(" (")[0] for n in re.findall(r"^\| ([^|]+?) \|", section, re.M)} - {"Framework", "Stack"}
+
+        options = names("### Choosing the framework (scaffold-time)")
+        self.assertGreaterEqual(len(options), 5)
+        self.assertLessEqual(options, names("### Structure by stack (scaffold-time)"))
+
     def test_quality_config_template_is_valid(self):
         config = json.loads((KIT / "templates" / "quality.config.json").read_text(encoding="utf-8"))
         for section in config:

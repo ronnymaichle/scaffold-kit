@@ -8,7 +8,7 @@ Becomes `docs/TESTING.md`. Tests are written first (Feature workflow, step 6); `
 |---|---|---|---|
 | Unit | Services and business rules, pure logic, validation schemas, DTO mappers, utilities, component behaviour | Fakes for external services; no database | Vitest (with Testing Library for components), pytest, go test, bun test |
 | Integration | Repositories and queries, migrations, transactions, RLS or security rules, route handlers with the real stack | A real, isolated test database in Docker (`docs/DATABASE.md`) | The same runner; Testcontainers when useful |
-| End-to-end | Critical user flows only | The built app on a freshly migrated and seeded database | Playwright with @axe-core/playwright |
+| End-to-end | Critical user flows only | The built app on a freshly migrated and seeded database | Playwright with axe (`@axe-core/playwright`, or `axe-playwright-python` for Playwright in Python) |
 | Load | Hot paths | Staging or a dedicated environment | k6 (`docs/SCALING.md`) |
 
 ## Unit and integration conventions

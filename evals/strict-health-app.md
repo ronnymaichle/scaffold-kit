@@ -20,7 +20,7 @@ Checks that health data and payments lead to the strict profile and its addition
 ## The plan must
 
 - choose the strict profile and say why: health data and payments
-- keep health data in the EU, encrypt clinical notes and pain logs at field level, and keep secrets in a secrets manager
+- keep health data in the EU, encrypt the free-text health fields (clinical notes, comments) at field level, and keep secrets in a secrets manager
 - plan a data protection impact assessment, records of processing, a breach procedure with the 72-hour notice, and a lawyer's review of the terms and policies
 - make each clinic a tenant from the first migration, with Row Level Security and cross-tenant tests, and let only the patient and the patient's own physiotherapists see health data
 - require MFA for staff and admin accounts, a fresh password or passkey check for admin actions, and an admin area behind an access proxy

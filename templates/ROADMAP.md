@@ -5,6 +5,7 @@ The features planned for this app, in build order. Launch tasks are in `docs/LAU
 ## Rows
 
 - Each row is one feature that fits one PR (the size limit is in `CONTRIBUTING.md`): a thin vertical slice a user can try from start to end, with its screens, server code, data and tests. It names the Planned actions it builds (`docs/ARCHITECTURE.md`).
+- Features that must exist before launch (account export and deletion, the terms re-acceptance screen, a report action for user content) are rows like any other; the launch checklist only checks that they are done.
 - Each row has a fixed id (`R1`, `R2`), never renumbered or reused, so the branches and PRs that cite it stay findable when rows move.
 - A feature too big for one PR gets the status `split`, and its parts follow it as rows of their own (`R7a`, `R7b`). A row that depends on it is ready when all its parts are done.
 - Status: `planned`, `split`, `dropped`, or `done (#14)` with the PR number (`!14` on GitLab). Done and dropped rows stay, so the file also shows progress.

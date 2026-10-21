@@ -33,8 +33,8 @@ Offline-first apps need an explicit sync design whatever the store: local storag
 ### Rules for every approach
 
 - Email verification; password reset with single-use, expiring tokens; rate limiting with backoff on login, signup and reset.
-- Passwords hashed with argon2id or bcrypt through the library; never hand-rolled crypto.
-- Optional MFA (TOTP) and passkeys for users; MFA required for admin and staff accounts (in the lean profile, recommended).
+- Passwords hashed through the library with Argon2id, or scrypt where Argon2id is not available, with at least the parameters in OWASP's Password Storage Cheat Sheet; bcrypt only in existing systems, with input limited to 72 bytes; never hand-rolled crypto.
+- Optional MFA (TOTP) and passkeys for users; MFA required for admin and support accounts, meaning any role that can see or change other people's data (in the lean profile, recommended).
 - Social login through OAuth or OIDC with state and PKCE.
 - Sessions rotate on login and privilege change and are revoked on the server at logout and password change.
 
@@ -42,12 +42,12 @@ Offline-first apps need an explicit sync design whatever the store: local storag
 
 - Every app starts with three roles: `anonymous` (visitors without an account), `user` (signed in) and `admin`. Further roles and admin levels (for example `support`, `moderator` or `owner`) are decided in the plan from what the app needs (scaffold-time), and can be added later without changing the code that checks access. Multi-tenant apps also have roles inside each tenant (for example `owner` and `member`), held per membership, next to the platform's own `admin`.
 - Code checks permissions, never role names: `can(actor, 'marker.delete', marker)`, on the server, in every entry point (`docs/security/SAFEGUARDS.md`). Permissions are named `resource.action` and listed in one typed catalog in code (for example `$lib/server/auth/permissions.ts`), together with the map from each role to its permissions, so an unknown permission fails type checking. A new role is an entry in that map, reviewed and tested like any other code. Roles that admins define in the running app are added only when customers need their own, as an architecture change with an ADR.
-- Who holds which role lives in the database (a `user_roles` table, or the membership in a multi-tenant app). A user can hold several roles, and gets the permissions of all of them.
+- Who holds which role lives in the database (a `user_roles` table, or the membership in a multi-tenant app). A user can hold several roles, and gets the permissions of all of them. Roles inside a tenant are named for it (`association_admin`, `clinic_admin`) and held on the membership, so they never mix with the platform's own `admin`.
 - `anonymous` has its permissions listed like every other role, starting from none, so what visitors can do is written down and tested.
 - Ownership is a separate check: `marker.delete` lets a user delete their own markers, `marker.delete.any` lets a moderator delete anyone's.
 - Costly features need a verified account (`docs/security/SAFEGUARDS.md`).
 - The first admin is created with a command run on the server (for example `admin:grant <email>`), never through sign-up, a default password, or an environment variable that grants admin at start.
-- Changing roles needs the `roles.manage` permission. Nobody can grant a permission they do not hold or change their own roles, and the last admin cannot be removed. A role change rotates the user's sessions, goes into the audit log, and notifies the user and the admins.
+- Changing roles needs the `roles.manage` permission. Nobody can grant a permission they do not hold or change their own roles, and the last admin cannot be removed. A role change rotates the user's sessions, goes into the audit log, and notifies the user and the admins (by email, or in the app when it sends no email).
 - The admin area has its own routes (for example `/admin`), which are `noindex` and check permissions in every entry point like any other route.
 - Tests: the permission matrix and route coverage tests (`docs/TESTING.md`).
 
@@ -83,7 +83,7 @@ Offline-first apps need an explicit sync design whatever the store: local storag
 - Types flow from the schema: the ORM infers row types, input validation schemas are derived from or aligned with them (drizzle-valibot, drizzle-zod), and the framework's generated route types (SvelteKit `./$types`) carry them to components. Strict type checking (`tsc`, plus `svelte-check` in SvelteKit) runs in `check`, so a mismatch between database, server and UI fails the build. Svelte components use TypeScript like any other code (`<script lang="ts">`).
 - Raw database rows never reach the client: repositories or services map them to explicit DTO types (for example `toMarkerDTO`) that list only safe fields, so password hashes and internal flags cannot leak.
 - A schema-drift check (generating a migration yields no changes) runs in `check`.
-- Other languages: Python uses SQLAlchemy models with Pydantic schemas and strict mypy or pyright; Go uses sqlc-generated code; a separate frontend gets a typed client generated from OpenAPI.
+- Other languages: Python uses Django models with django-stubs, or SQLAlchemy models with Pydantic schemas, with strict mypy or pyright; Go uses sqlc-generated code; a separate frontend gets a typed client generated from OpenAPI.
 
 ## ORM and query layer (scaffold-time)
 
@@ -94,7 +94,8 @@ Verify current versions and support for special types such as PostGIS with a web
 | TypeScript with SQL; SQL-like control, lightweight, Bun-friendly | Drizzle ORM with drizzle-kit migrations |
 | TypeScript; a higher-level API and tooling preferred | Prisma (raw SQL may be needed for types such as geo) |
 | TypeScript; complex dynamic SQL without an ORM | Kysely (type-safe query builder) |
-| Python | SQLAlchemy 2 with Alembic (SQLModel for simple FastAPI apps) |
+| Python with Django | Django's ORM and migrations |
+| Python with FastAPI or another framework | SQLAlchemy 2 with Alembic (SQLModel for simple FastAPI apps) |
 | Go | sqlc with goose or Atlas migrations |
 | MongoDB | The official driver with schema validation, or Mongoose |
 | Supabase or Firebase | A server-side ORM or SDK with generated types; client SDKs only with RLS or security rules in place |

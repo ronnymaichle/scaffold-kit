@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.12.0 (2026-10-21)
+
+Fixes from the first eval run of 2.11.0 (four dry runs: 62 of 63 checklist items passed, 13 issues reported).
+
+- The plan (skill step 3): it shows decisions, not the kit's defaults: one or two lines per item for what the project chooses or does differently, tables for roles and budgets, and one closing line naming the defaults that apply; a lean plan is about one screen plus the stack comparison, which comes first in the same reply as a table. Step 1 asks for the git host's plan (free or paid, private or public).
+- Frameworks (`architecture.md`): a new "Choosing the framework" table (SvelteKit, Next.js, Django, FastAPI, Hono or Elysia, Go: good fit and what to watch out for), which the skill's step 3 already pointed to. New structure rows for Next.js (App Router, `src/server` services and repositories behind `import 'server-only'`, `proxy.ts` for coarse checks only) and Django (one app per domain, thin views, `services.py` using the ORM directly). A kit test checks that every framework in the table has a structure row.
+- Python and stacks without Node: Django's ORM and migrations for Django, SQLAlchemy and Alembic for FastAPI (`backend.md`); the global error hooks for Next.js (`onRequestError` in `instrumentation.ts`, `error.tsx`, `global-error.tsx`) and Django (`process_exception`, `handler500`) (`logging.md`); `axe-playwright-python` for Playwright in Python (`testing.md`); commitizen's `cz check` where there is no Node (`git-workflow.md`, `lefthook.yml`); make targets where there are no package scripts (`hosting.md`, scaffold progress). The agent guard recognizes `make deploy-env ENV=production` like `deploy:env production`.
+- Projects without staging: checkpoint D dry-runs the promote script against production when there is no staging, and the launch checklist checks budgets and the promote script against staging only where it exists.
+- Lean profile consistency: the admin alert inbox is left out in lean (checkpoints B and D), MFA for admin and support accounts is recommended in lean everywhere, an app that sends no email still sets up the mail module for security alerts, and role changes notify in the app when there is no email.
+- Roadmap and launch checklist: account export and deletion, the terms re-acceptance screen and the report action are roadmap rows; the launch checklist only checks that they are done.
+- GitHub Free (`git-workflow.md`, `hosting.md`): private repositories there have no branch protection, required reviewers or deployment protection rules (GitHub's plans page). The plan says which applies; without them, CI and the agent guard still hold, and production deploys run as a manually started workflow on a tag.
+- Upgrade mode (`upgrade.md`): ask in one round for what the code cannot show (budget, hosting, countries, alert recipients); console steps (spending caps, exposed rules or keys) come first, from a checklist, before the plan PR, which goes in alone; the first fix PR adds a test runner if there is none; no lockfile means the audit is listed as not run; the safety net places `docs/AGENT-TEAM.md`, the threat model and the root `SECURITY.md`; the gap report covers privacy and the agent setup.
+- Feature size: generated files and vendored folders such as `scripts/quality/` do not count toward the PR size limit.
+- Edge protection (`security.md`): on a platform with neither a firewall nor a tunnel, the origin accepts only requests with a secret header from the proxy, or the proxy's client certificate.
+- Privacy (`privacy.md`): in business-to-business apps each customer is the controller and the app its processor, with a data processing agreement per customer; records the law requires keeping stay for that period despite account deletion.
+- Auth (`backend.md`): passwords with Argon2id, or scrypt, at OWASP's parameters, and bcrypt only in existing systems; roles inside a tenant are named for it (`clinic_admin`) and held on the membership; "admin and support accounts" replaces "staff accounts".
+- Evals: the checklists follow these changes.
+- Skill: steps 1 and 3 changed. The saved claude.ai skill needs updating.
+- Projects: in upgrade mode, update `docs/ARCHITECTURE.md` (if the stack is Next.js or Django), `CONTRIBUTING.md` (GitHub Free, size counting, commit checks), `docs/DATABASE.md` and the Auth section (password hashing, tenant role names, MFA wording), `docs/PRIVACY.md`, `docs/security/THREAT-MODEL.md` (edge protection), `docs/LOGGING.md` and `docs/TESTING.md` for Next.js, Django or Python, the launch checklist and the roadmap (move export, deletion, re-acceptance and the report action into roadmap rows), and replace `scripts/quality/`.
+
 ## 2.11.0 (2026-10-21)
 
 - Fix to 2.10.0: the guard hook command in `templates/claude/settings.json` now lets commands through when `scripts/quality/agent_guard.py` is missing (an older checkout, a replay worktree). Before, Python's exit code 2 for a missing file read as a block, so every shell command would have been blocked. A new test runs the hook command with and without the script.
