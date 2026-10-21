@@ -25,7 +25,7 @@ If the user points to a local copy of the kit, use that instead. If the kit cann
 | Kit path | Contents |
 |---|---|
 | `references/` | The full rules, one file per area. Read each one before the step that needs it; its first lines name the project docs it becomes. |
-| `templates/` | Root `CLAUDE.md` with the Feature, Hotfix and Release workflows; `plan-preview.html` (the draft page for step 3); `SCAFFOLD-PROGRESS.md`; `ROADMAP.md`; `LAUNCH-CHECKLIST.md`; `adr.md`; `folder-CLAUDE.md`; `SECURITY.md`; `github/` (PR and issue templates, CI); `lefthook.yml`; `commitlint.config.mjs`; `quality.config.json`; `editorconfig`; `gitattributes`; `claude/` (the lead's model in `settings.json`, the agent definitions in `agents/` and the stack-conventions skill in `skills/`, copied to `.claude/`) |
+| `templates/` | Root `CLAUDE.md` with the Feature, Hotfix and Release workflows; `plan-preview.html` (the draft page for step 3); `SCAFFOLD-PROGRESS.md`; `ROADMAP.md`; `AGENT-METRICS.md`; `LAUNCH-CHECKLIST.md`; `adr.md`; `folder-CLAUDE.md`; `SECURITY.md`; `github/` (PR and issue templates, CI); `lefthook.yml`; `commitlint.config.mjs`; `quality.config.json`; `editorconfig`; `gitattributes`; `claude/` (the lead's model in `settings.json`, the agent definitions in `agents/` and the stack-conventions skill in `skills/`, copied to `.claude/`) |
 | `scripts/quality/` | Check scripts (Python 3.9+, standard library only): folder docs and code map, debug leftovers, design tokens and contrast, palette generator, trusted sources |
 
 ## Choose the mode

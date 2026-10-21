@@ -27,6 +27,7 @@ description: "Change the scaffold-project skill or its scaffold-kit repository (
 | The scripts' configuration defaults | `_DEFAULTS` in `scripts/quality/common.py` | `templates/quality.config.json` for new keys, and the configuration note in `README.md` |
 | The process: inputs asked, profiles, checkpoints, upgrade mode, the kit URL | `skill/scaffold-project/SKILL.md` | Publishing the skill (workflow step 8) |
 | Which project doc a reference becomes | The reference's first lines | The mapping tables in the skill and in `README.md` (a test compares them) |
+| The sample ideas and checklists for dry runs of the skill | `evals/` | `evals/README.md` lists every case (a test checks) |
 
 Rules that keep the kit coherent:
 
@@ -55,7 +56,7 @@ Rules that keep the kit coherent:
 
 ## Trying a process change
 
-For changes to how the skill behaves (questions, profiles, the plan, checkpoints), offer a dry run before releasing. In an empty scratch folder, have a fresh Claude session follow `skill/scaffold-project/SKILL.md` for a sample idea, with this repository as the local copy of the kit, and stop at the plan. Then compare its plan with the previous version's.
+For changes to how the skill behaves (questions, profiles, the plan, checkpoints, upgrade mode) or to what its plan covers, run the evals in `evals/` before merging. Each case is an idea with complete answers and the checklist its plan must meet; `evals/README.md` has the setup and the prompt. A fresh agent runs each affected case against the branch's kit, a second fresh agent (or the user) grades the plan item by item, and the PR records the result per case. A failed item is fixed before merging, or the checklist changes with the reason given in the PR. When a release adds something the plan should cover, add it to the cases' checklists in the same PR.
 
 ## Never
 

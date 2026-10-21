@@ -34,7 +34,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/scripts/quality/agent_guard.py\"",
+            "command": "test ! -f \"${CLAUDE_PROJECT_DIR}/scripts/quality/agent_guard.py\" || python3 \"${CLAUDE_PROJECT_DIR}/scripts/quality/agent_guard.py\"",
             "timeout": 10
           }
         ]

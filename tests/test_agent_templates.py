@@ -1,9 +1,12 @@
 """The agent templates stay valid, match the roster in references/agents.md, and avoid known traps."""
 import json
+import os
 import re
+import shutil
+import subprocess
 import unittest
 
-from helpers import KIT
+from helpers import KIT, TempProject
 from test_skill_files import frontmatter
 
 AGENTS = KIT / "templates" / "claude" / "agents"
@@ -116,6 +119,27 @@ class AgentTemplateTests(unittest.TestCase):
         # (references/agents.md): the sandbox gets in the way of Docker and local services.
         self.assertNotIn("sandbox", settings)
         self.assertNotIn("disableBypassPermissionsMode", settings.get("permissions", {}))
+
+    @unittest.skipUnless(shutil.which("bash"), "bash is not installed")
+    def test_guard_hook_command_never_blocks_by_accident(self):
+        # Claude Code reads exit code 2 from a PreToolUse hook as a block, and Python exits 2
+        # when the script is missing (a replay worktree, an older checkout), which would block
+        # every shell command. Without the script the hook must allow; with it, it must decide.
+        settings = json.loads(SETTINGS.read_text(encoding="utf-8"))
+        command = settings["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+        payload = json.dumps({"tool_name": "Bash", "tool_input": {"command": "git push -f origin feat/x"}})
+        with TempProject() as p:
+            env = dict(os.environ, CLAUDE_PROJECT_DIR=str(p.root))
+
+            def run():
+                return subprocess.run(["bash", "-c", command], input=payload, env=env, capture_output=True, text=True, check=False)
+
+            result = run()
+            self.assertEqual((result.returncode, result.stdout), (0, ""), result.stderr)
+            shutil.copytree(KIT / "scripts" / "quality", p.root / "scripts" / "quality", ignore=shutil.ignore_patterns("__pycache__"))
+            result = run()
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"], "deny")
 
 
 if __name__ == "__main__":

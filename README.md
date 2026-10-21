@@ -7,9 +7,10 @@ Rules, templates and tested check scripts for the `scaffold-project` Claude skil
 | Path | What it is | Where it ends up in a project |
 |---|---|---|
 | `references/` | The full rules, one file per area | Project docs; the first lines of each file name the docs it becomes |
-| `templates/` | Root `CLAUDE.md` with the workflows, the plan-step draft page, folder doc, scaffold progress and launch checklists, roadmap, ADR, `SECURITY.md`, GitHub templates and CI, lefthook, commitlint, quality config, editorconfig, gitattributes, Claude Code settings, agent definitions and the stack-conventions skill (`claude/`, copied to `.claude/`) | Copied and filled in |
+| `templates/` | Root `CLAUDE.md` with the workflows, the plan-step draft page, folder doc, scaffold progress and launch checklists, roadmap, agent metrics, ADR, `SECURITY.md`, GitHub templates and CI, lefthook, commitlint, quality config, editorconfig, gitattributes, Claude Code settings, agent definitions and the stack-conventions skill (`claude/`, copied to `.claude/`) | Copied and filled in |
 | `scripts/quality/` | Check scripts: Python 3.9+, standard library only | Copied unchanged to `scripts/quality/` |
 | `tests/` | Unit tests for the scripts, the documented examples and the skill files | Not copied |
+| `evals/` | Repeatable dry runs of the skill's planning step: sample ideas with complete answers, the checklist each plan must meet, and an upgrade fixture | Not copied |
 | `skill/scaffold-project/SKILL.md` | Source of the scaffold-project skill | Not copied; saved in the user's claude.ai account, which syncs it to Claude Code |
 | `skill/scaffold-kit-maintainer/SKILL.md` | Source of the scaffold-kit-maintainer skill, for changing this repository | Not copied; saved in the user's claude.ai account, which syncs it to Claude Code |
 

@@ -33,7 +33,7 @@ class KitFileTests(unittest.TestCase):
 
     def test_scaffold_progress_creates_the_doc_templates(self):
         progress = (KIT / "templates" / "SCAFFOLD-PROGRESS.md").read_text(encoding="utf-8")
-        for name in ("LAUNCH-CHECKLIST.md", "ROADMAP.md"):
+        for name in ("LAUNCH-CHECKLIST.md", "ROADMAP.md", "AGENT-METRICS.md"):
             with self.subTest(template=name):
                 self.assertTrue((KIT / "templates" / name).is_file())
                 self.assertIn(f"`docs/{name}`", progress)
@@ -61,6 +61,7 @@ class KitFileTests(unittest.TestCase):
             "docs/OPERATIONS.md", "docs/DESIGN.md", "docs/SEO.md", "docs/ANALYTICS.md",
             "docs/LOGGING.md", "docs/TESTING.md", "docs/SOURCES.md", "docs/CODEMAP.md", "docs/LAUNCH-CHECKLIST.md",
             "docs/SCAFFOLD-PROGRESS.md", "docs/UPGRADE-PLAN.md", "docs/AGENT-TEAM.md", "docs/ROADMAP.md",
+            "docs/AGENT-METRICS.md",
         }
         files = list((KIT / "references").glob("*.md")) + list((KIT / "templates").rglob("*.md"))
         for path in files:

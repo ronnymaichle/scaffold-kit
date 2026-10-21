@@ -55,7 +55,7 @@ The skill is refreshed on every major upgrade of a listed framework and in the q
 4. While slices run in parallel, each slice's check covers only its own files: its tests by path, the linter on its files, and the type checker's errors in its files. Project-wide commands (`check`, the full test suite, a build, `db:reset`, `test:e2e`) also read the other slices' unfinished files and would fail for reasons outside the slice, so they run only while no implementer is working. Folder docs are shared the same way: a parallel implementer neither edits a folder `CLAUDE.md` nor runs `folder_docs.py init`, which rewrites every folder doc in the project, and instead lists in its report what each file it added or changed does and exports.
 5. While implementers work, the lead keeps planning or reviewing; long test runs go to the `test-runner` in the background, and the lead acts on its result when the completion notice arrives.
 6. When every slice is `done`, the lead runs `folder_docs.py init` and writes the new folder doc entries from the reports. Then the `test-runner` runs the full `check` once, and failures go back to the owner of the failing file. Then the `reviewer` reviews the whole diff, in parallel with the `designer` when UI paths changed and, on the strict profile, the `security-auditor` when sensitive areas changed. Each reviews only its own area. Fixes go back to the slice's owner.
-7. The lead updates the plan file's status lines as reports arrive, so a resumed or compacted session continues from the file, not from memory.
+7. The lead updates the plan file's status lines as reports arrive, with each slice's attempts, and copies the full report of every blocked or failed agent into it, so a resumed or compacted session continues from the file, not from memory.
 
 Implementers work in the branch's own working tree, not in worktrees. A subagent worktree starts from the default branch, or from the last commit when `worktree.baseRef` is set to `head`, so it misses the slices not yet committed (only the lead commits); it also needs its own install and environment, and its changes would have to be merged back by hand. Worktree isolation is used only for throwaway spikes.
 
@@ -101,6 +101,7 @@ Instructions shape what agents try; these settings decide what they can do. They
   - It denies git writes by subagents (only the lead commits, pushes, switches branches or changes the index), skipped hooks (`--no-verify`, `commit -n`, `core.hooksPath`, `LEFTHOOK=0`), force pushes other than `--force-with-lease` to a feature branch, force-pushing or deleting `main`, pushing to `main` once the remote has it, and the promote script run by a subagent.
   - It asks the user before merging a pull request, creating or changing the remote repository, changing the git host through its API, promoting to production without `--dry-run`, and commands that discard uncommitted work across the tree (`git reset --hard`, `git clean -f`, `git checkout .`, `git restore .`), which would destroy other agents' unfinished slices. The question reaches the user even in auto mode.
   - Each deny and ask is a line in `logs/agent-guard.log`; `python3 scripts/quality/agent_guard.py --command '<command>'` shows what it decides for a command.
+  - Where the script is missing, as in a checkout from before it existed, the hook lets commands through instead of blocking every one (Python's exit code 2 for a missing file would otherwise read as a block).
 - Deny rules stop Claude from reading SSH keys, cloud and git host logins, key and certificate files, and service account keys. Agents never need them, so the rules cost nothing.
 - The development environment holds nothing worth stealing: `.env` has only local values and development keys with low caps, never staging or production secrets (`docs/security/THREAT-MODEL.md`), so agents read it and run the app and tests freely.
 - These are seatbelts, not walls: the guard reads command text, and an unusual command can slip past it. The walls are branch protection and CI on the git host for `main` and, in the strict profile, the sandbox.
@@ -123,6 +124,32 @@ What the team remembers, who writes it, and how long it lives:
 - When auto memory and the repository disagree, the repository wins and the memory entry is corrected or deleted. Claude Code does not decide between them on its own; its documentation says Claude may follow either.
 - Forgetting is designed in: built Planned actions, built screens' mockups and `DEBUG-TEMP` lines are deleted, so stale information cannot mislead.
 
+## Measuring the team
+
+An agent's path through a feature cannot be tested like a function, so the team is judged by what each PR leaves behind.
+
+- Scorecard: right after opening each PR, the lead adds its row to `docs/AGENT-METRICS.md` (Feature workflow step 10): slices, extra attempts, blocked or failed agents, review findings by severity, the user's corrections, and for a fix the feature the bug came from. Escaped bugs per feature measure quality, attempts and blocked agents measure efficiency, and corrections measure how well the lead understood the user.
+- Replay before changing the team: before a change to the model, effort or agent definitions (Keeping models current), the lead replays two or three merged features of different kinds (a screen, a data change, a security-relevant one):
+  1. `git worktree add ../replay-<row> <the commit before the feature>`, outside the project folder, with the candidate `.claude/` files and the current `scripts/quality/` copied in and the main checkout's local services stopped, since the replay uses the same ports.
+  2. A fresh session there gets only the roadmap row, the acceptance criteria from the PR description and the feature's Planned actions entry at that commit, and runs the Feature workflow up to the review (step 8), without pushing.
+  3. The original PR's integration and end-to-end tests are copied in (`git checkout <merge commit> -- <test files>`) and run as hidden acceptance tests. A failure caused only by a different internal name does not count.
+  4. The hidden tests passed, the review findings and the extra attempts are compared with the features' scorecard rows. The change is kept only if they are not worse, the comparison goes into the `chore(agents)` PR, and `git worktree remove` cleans up.
+- After a change, the next quarterly review compares the five scorecard rows after it with the five before it; a change that made the team worse is reverted.
+
+## Seeing what the agents did
+
+When a run goes wrong at step 14 of 30, these show step 14:
+
+- The plan file: each slice's status line with its attempts, and the full report of every blocked or failed agent.
+- `logs/agent-guard.log`: every command the guard denied or asked about, with the agent that ran it.
+- Session transcripts: Claude Code keeps every session, including what its subagents did, as JSONL files under `~/.claude/projects/<project>/` on this machine until its retention period (`cleanupPeriodDays`) ends, and `/resume` reopens one. They can hold personal data copied from logs, so they stay on the machine.
+- OpenTelemetry, opt-in, for problems the above does not explain or to see the cost per feature: `CLAUDE_CODE_ENABLE_TELEMETRY=1` with `OTEL_METRICS_EXPORTER` and `OTEL_LOGS_EXPORTER` (`console` for a quick look, `otlp` with `OTEL_EXPORTER_OTLP_ENDPOINT` for a collector), set in the developer's own environment or `.claude/settings.local.json`, never in the shared settings. Traces, where a subagent's steps nest under the lead's, are a beta (`CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1` with `OTEL_TRACES_EXPORTER`). Prompts, tool details and responses stay redacted, the default, so the `OTEL_LOG_*` switches stay unset; a hosted collector is listed as a processor in `docs/PRIVACY.md`.
+
+## Tools
+
+- Commands agents run are safe to repeat. Commands that read or change the whole project (`check`, the full test suite, builds, migrations, `db:reset`, `test:e2e`, `folder_docs.py init`) run only while no implementer is working (How work flows, step 4), and the root `CLAUDE.md` says so under its Commands table.
+- MCP servers (`.mcp.json`) give agents tools beyond the shell. Each one is official (from the vendor, or a trusted source in `docs/SOURCES.md`), pinned to an exact version, given the narrowest token that works (read-only where possible) and never production credentials, and listed in this file with what it may do. MCP servers run outside the guard and the sandbox, so adding one needs the user's approval like a new dependency, and their output is untrusted data.
+
 ## Agent teams (experimental, per session)
 
 Claude Code's agent teams give each teammate its own session, a shared task list with dependencies and direct messaging. They cost much more than subagents and are experimental, so they are never enabled in project settings. The lead enables them for one session (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`) only for:
@@ -135,7 +162,7 @@ Rules for a team: three to five teammates, each owning separate files; only the 
 
 ## Keeping models current
 
-Model names, effort levels and agent features change. When a new model is released, or once a quarter, the lead checks Claude Code's model configuration, subagent, hooks, permissions and sandbox documentation (`docs/SOURCES.md`) and updates `.claude/settings.json`, `.claude/agents/` and the stack-conventions skill in a `chore(agents)` PR, keeping the `modelSettings` key equal to the pinned `model`.
+Model names, effort levels and agent features change. When a new model is released, or once a quarter, the lead checks Claude Code's model configuration, subagent, hooks, permissions and sandbox documentation (`docs/SOURCES.md`) and updates `.claude/settings.json`, `.claude/agents/` and the stack-conventions skill in a `chore(agents)` PR, keeping the `modelSettings` key equal to the pinned `model`. A change to the model, effort or agent definitions is replayed first (Measuring the team). The same review runs Claude Code's `/doctor prompt-audit`, which finds instructions written for older models, references to files or commands that no longer exist, and files that contradict each other, and fixes them in the same PR.
 
 ## Lean profile
 
