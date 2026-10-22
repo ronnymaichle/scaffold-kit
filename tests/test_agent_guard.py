@@ -5,6 +5,7 @@ import re
 import subprocess
 import sys
 import unittest
+from unittest import mock
 
 from helpers import HAS_GIT, KIT, QUALITY, TempProject, run_main
 
@@ -259,6 +260,7 @@ CREDENTIAL_READS = [
     "openssl rsa -in certs/server.key -text",
     "python3 -c \"print(open('~/.ssh/id_rsa'.replace('~', '/Users/me')).read())\"",
     "echo $(cat ~/.git-credentials)",
+    "cat ~/.claude/script-approvals/3f2a.json",
 ]
 
 CREDENTIAL_SAFE = [
@@ -465,6 +467,159 @@ class HookTests(unittest.TestCase):
             self.assertFalse((p.root / "logs").exists())
 
 
+SCRIPT_FILES = {
+    "scripts/tool.py": "import common\n",
+    "scripts/common.py": "X = 1\n",
+    "scripts/notes.md": "notes\n",
+    "scripts/run.sh": "echo hi\n",
+    "app/index.js": "console.log(1)\n",
+    "app/util.ts": "export const a = 1\n",
+    "node_modules/x/bin.js": "x\n",
+    ".venv/bin/tool.py": "x\n",
+}
+
+# Commands that run project code: the key is the folder and language whose files the approval covers.
+SCRIPT_RUNS = [
+    ("python3 scripts/tool.py --dry-run", "scripts/*.py"),
+    ("python3 -I -B scripts/tool.py", "scripts/*.py"),
+    ("python3.12 -W ignore scripts/tool.py", "scripts/*.py"),
+    ("cd scripts && python3 tool.py", "scripts/*.py"),
+    ("python3 -m scripts.tool", "scripts/*.py"),
+    ("FOO=1 timeout 60 python3 scripts/tool.py | tail -5", "scripts/*.py"),
+    ("echo $(python3 scripts/tool.py)", "scripts/*.py"),
+    ("bash scripts/run.sh", "scripts/*.sh"),
+    ("./scripts/run.sh", "scripts/*.sh"),
+    ("sh -c 'scripts/run.sh'", "scripts/*.sh"),
+    ("source scripts/run.sh", "scripts/*.sh"),
+    ("node app/index.js", "app/*.{js,ts}"),
+    ("bun run app/util.ts", "app/*.{js,ts}"),
+]
+
+# Commands that run no project file: inline code, stdin, dependencies, files outside the project, or nothing at all.
+NO_SCRIPT_RUNS = [
+    "python3 -c 'print(1)'",
+    "python3 -Ic 'print(1)'",
+    "python3 - <<'EOF'\nprint(1)\nEOF",
+    "python3 --version",
+    "python3 -m pytest",
+    "node -e 'console.log(1)'",
+    "node node_modules/x/bin.js",
+    "python3 .venv/bin/tool.py",
+    "cat scripts/tool.py",
+    "pnpm test",
+    "bun run dev",
+    "git status",
+]
+
+
+class ScriptRunTests(unittest.TestCase):
+    def project(self):
+        p = TempProject(SCRIPT_FILES)
+        p.__enter__()
+        self.addCleanup(p.__exit__, None, None, None)
+        return p
+
+    def test_finds_the_project_code_a_command_runs(self):
+        p = self.project()
+        for command, key in SCRIPT_RUNS:
+            with self.subTest(command=command):
+                self.assertEqual(list(agent_guard.scripts_run(command, root=p.root)), [key])
+        for command in NO_SCRIPT_RUNS:
+            with self.subTest(command=command):
+                self.assertEqual(agent_guard.scripts_run(command, root=p.root), {})
+
+    def test_files_outside_the_project_are_not_checked(self):
+        p = self.project()
+        with TempProject({"elsewhere.py": "x\n"}) as other:
+            self.assertEqual(agent_guard.scripts_run(f"python3 {other.root}/elsewhere.py", root=p.root), {})
+
+    def test_the_fingerprint_covers_the_files_a_script_can_import(self):
+        p = self.project()
+        before = agent_guard.scripts_run("python3 scripts/tool.py", root=p.root)
+        p.write("scripts/notes.md", "other notes\n")
+        self.assertEqual(agent_guard.scripts_run("python3 scripts/tool.py", root=p.root), before)
+        p.write("scripts/common.py", "X = 2\n")
+        self.assertNotEqual(agent_guard.scripts_run("python3 scripts/tool.py", root=p.root), before)
+
+
+class ScriptApprovalHookTests(unittest.TestCase):
+    """The hook asks before project code it has not seen approved, and records the approval once the command runs."""
+
+    def setUp(self):
+        self.home = TempProject()
+        self.home.__enter__()
+        self.addCleanup(self.home.__exit__, None, None, None)
+        self.p = TempProject(SCRIPT_FILES)
+        self.p.__enter__()
+        self.addCleanup(self.p.__exit__, None, None, None)
+
+    def hook(self, command, event="PreToolUse", tool_use_id="toolu_1"):
+        payload = {
+            "hook_event_name": event, "tool_name": "Bash", "cwd": str(self.p.root),
+            "tool_use_id": tool_use_id, "tool_input": {"command": command},
+        }
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=str(self.p.root), HOME=str(self.home.root))
+        result = subprocess.run(
+            [sys.executable, "-B", str(QUALITY / "agent_guard.py")],
+            input=json.dumps(payload), capture_output=True, text=True, env=env, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(result.stdout)["hookSpecificOutput"] if result.stdout else None
+
+    def test_asks_until_the_code_runs_once_approved_and_again_after_a_change(self):
+        out = self.hook("python3 scripts/tool.py")
+        self.assertEqual(out["permissionDecision"], "ask")
+        self.assertIn("scripts/*.py", out["permissionDecisionReason"])
+        self.assertIsNone(self.hook("python3 scripts/tool.py", event="PostToolUse"))
+        self.assertIsNone(self.hook("python3 scripts/tool.py", tool_use_id="toolu_2"))
+        self.assertIsNone(self.hook("python3 -m scripts.tool", tool_use_id="toolu_3"))
+        self.p.write("scripts/common.py", "X = 2\n")
+        out = self.hook("python3 scripts/tool.py", tool_use_id="toolu_4")
+        self.assertEqual(out["permissionDecision"], "ask")
+        self.assertIn("changed", out["permissionDecisionReason"])
+
+    def test_a_failed_run_still_counts_as_approved(self):
+        self.hook("bash scripts/run.sh")
+        self.hook("bash scripts/run.sh", event="PostToolUseFailure")
+        self.assertIsNone(self.hook("bash scripts/run.sh", tool_use_id="toolu_2"))
+
+    def test_a_refused_command_approves_nothing(self):
+        self.hook("python3 scripts/tool.py")
+        # No PostToolUse: the user said no, so the command never ran.
+        self.assertEqual(self.hook("python3 scripts/tool.py", tool_use_id="toolu_2")["permissionDecision"], "ask")
+        self.hook("python3 scripts/tool.py", event="PostToolUse", tool_use_id="toolu_9")
+        self.assertEqual(self.hook("python3 scripts/tool.py", tool_use_id="toolu_3")["permissionDecision"], "ask")
+
+    def test_deny_wins_and_records_nothing(self):
+        out = self.hook("python3 scripts/tool.py && git push -f origin feat/x")
+        self.assertEqual(out["permissionDecision"], "deny")
+        self.hook("python3 scripts/tool.py && git push -f origin feat/x", event="PostToolUse")
+        self.assertEqual(self.hook("python3 scripts/tool.py", tool_use_id="toolu_2")["permissionDecision"], "ask")
+
+    def test_another_ask_keeps_both_reasons(self):
+        out = self.hook("python3 scripts/tool.py && gh pr merge 3 --squash")
+        self.assertEqual(out["permissionDecision"], "ask")
+        self.assertIn("Merging", out["permissionDecisionReason"])
+        self.assertIn("scripts/*.py", out["permissionDecisionReason"])
+
+    def test_approvals_live_outside_the_repository(self):
+        self.hook("python3 scripts/tool.py")
+        self.hook("python3 scripts/tool.py", event="PostToolUse")
+        ledgers = list((self.home.root / ".claude" / "script-approvals").glob("*.json"))
+        self.assertEqual(len(ledgers), 1)
+        ledger = json.loads(ledgers[0].read_text(encoding="utf-8"))
+        self.assertEqual(list(ledger["approved"]), ["scripts/*.py"])
+        self.assertEqual(ledger["pending"], {})
+        self.assertFalse(any("approval" in f.name for f in self.p.root.rglob("*")))
+
+    def test_commands_without_project_code_leave_no_trace(self):
+        for command in ("git status", "python3 -c 'print(1)'", "pnpm test"):
+            with self.subTest(command=command):
+                self.assertIsNone(self.hook(command))
+                self.assertIsNone(self.hook(command, event="PostToolUse"))
+        self.assertFalse((self.home.root / ".claude").exists())
+
+
 class CommandLineTests(unittest.TestCase):
     def test_check_one_command(self):
         code, out = run_main(agent_guard.main, ["--command", "git push --force origin feat/x"])
@@ -474,6 +629,13 @@ class CommandLineTests(unittest.TestCase):
         self.assertEqual(code, 1)
         code, out = run_main(agent_guard.main, ["--command", "git status"])
         self.assertEqual((code, out.strip()), (0, "allow"))
+
+    def test_the_command_line_shows_the_script_question(self):
+        with TempProject(SCRIPT_FILES) as p, TempProject() as home, mock.patch.dict(os.environ, {"HOME": str(home.root)}):
+            code, out = run_main(agent_guard.main, ["--command", "python3 scripts/tool.py", "--root", str(p.root)])
+            self.assertEqual(code, 1)
+            self.assertTrue(out.startswith("ask: "), out)
+            self.assertFalse((home.root / ".claude").exists(), "checking a command records nothing")
 
 
 if __name__ == "__main__":

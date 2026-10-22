@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.14.0 (2026-10-22)
+
+Fewer permission prompts, and a question where one matters. In one developer's last 38 sessions, all 342 manual approvals were compound shell commands that Claude Code cannot trace; none was a plain command an allow rule could have covered.
+
+- Plain shell commands (`agents.md`, Tools; root `CLAUDE.md`, under Commands): at most one `cd`, no `$(…)`, backticks or subshells, no paths outside the working directories, and the file tools instead of `cat`, `grep` and `sed` chains. With `permissions.blockReadsOutsideWorkingDirectories` on, Claude Code asks about untraceable commands and outside reads even in auto mode, and neither allow rules nor hooks can lift that question.
+- Script approvals (agent guard): it asks before running project code the user has not approved in its current form (a Python, Node or shell script, `python -m`, or a file run by its path, with the files next to it in the same language). Auto mode's reviewer sees only the command, and edits inside the project need no approval, so an agent could otherwise change a script and run it unseen. The approval is recorded once the command runs (new PostToolUse and PostToolUseFailure hooks), per folder and language, in `~/.claude/script-approvals/` outside the repository; deny rules and the guard keep agents out of it. Unchanged code runs without the question; replayed over those sessions, it would have asked once per project for `scripts/quality/*.py`. New `scripts_run()`; `--command` shows the question but never records an approval.
+- Ask rules (settings template): edits to `.claude/settings.json` and `settings.local.json`, `scripts/quality/`, `lefthook.yml` and `.github/workflows/` ask, even in auto mode; the scaffold adds the package manager's supply-chain file (for pnpm, `pnpm-workspace.yaml`). `.env` stays free to read, since it holds only local values.
+- Allow rules, written at scaffold time for the stack: the package manager's read-only registry lookups (for pnpm, `pnpm view`, `npm view`, `pnpm audit`). Never interpreters, package runners or package-script wildcards.
+- Skill: unchanged; the saved skills need no update.
+- Projects: in upgrade mode, replace `scripts/quality/`; merge the template's `ask` rules, the two `script-approvals` deny rules and the `PostToolUse` and `PostToolUseFailure` hooks into `.claude/settings.json`, and add the stack's ask and allow rules (Scaffold progress, `.claude/settings.json` item); in the strict profile, add `~/.claude/script-approvals` to the sandbox `credentials` entries; add the guard, deny-rule, ask-rule, allow-rule and plain-commands bullets to `docs/AGENT-TEAM.md`, and the plain-commands paragraph and the Agents line to the root `CLAUDE.md`. The first run of each script folder asks once.
+
 ## 2.13.0 (2026-10-21)
 
 Agents check every change in a real browser, and the agent guard protects the developer's machine, a Mac first.

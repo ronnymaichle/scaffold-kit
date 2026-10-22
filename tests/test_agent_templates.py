@@ -136,6 +136,32 @@ class AgentTemplateTests(unittest.TestCase):
         self.assertNotIn("sandbox", settings)
         self.assertNotIn("disableBypassPermissionsMode", settings.get("permissions", {}))
 
+    def test_settings_ask_before_agents_change_their_own_limits(self):
+        settings = json.loads(SETTINGS.read_text(encoding="utf-8"))
+        permissions = settings.get("permissions", {})
+        for rule in (
+            "Edit(/.claude/settings.json)", "Edit(/.claude/settings.local.json)", "Edit(/scripts/quality/**)",
+            "Edit(/lefthook.yml)", "Edit(/.github/workflows/**)",
+        ):
+            self.assertIn(rule, permissions.get("ask", []))
+        # The script approvals are the developer's; no agent reads or writes them.
+        for rule in ("Read(~/.claude/script-approvals/**)", "Edit(~/.claude/script-approvals/**)"):
+            self.assertIn(rule, permissions.get("deny", []))
+        # .env holds only local values, so agents read it freely (references/agents.md); an ask would only slow them.
+        self.assertFalse([r for r in permissions.get("ask", []) + permissions.get("deny", []) if ".env" in r])
+        # Allow rules are written per stack at scaffold time; the template approves no command.
+        self.assertNotIn("allow", permissions)
+
+    def test_the_guard_learns_which_commands_ran(self):
+        # Script approvals are recorded after the command runs, also when it fails.
+        settings = json.loads(SETTINGS.read_text(encoding="utf-8"))
+        guard = settings["hooks"]["PreToolUse"][0]["hooks"][0]
+        for event in ("PostToolUse", "PostToolUseFailure"):
+            with self.subTest(event=event):
+                entries = settings["hooks"].get(event, [])
+                self.assertEqual([e.get("matcher") for e in entries], ["Bash"])
+                self.assertEqual(entries[0]["hooks"], [guard])
+
     @unittest.skipUnless(shutil.which("bash"), "bash is not installed")
     def test_guard_hook_command_never_blocks_by_accident(self):
         # Claude Code reads exit code 2 from a PreToolUse hook as a block, and Python exits 2
