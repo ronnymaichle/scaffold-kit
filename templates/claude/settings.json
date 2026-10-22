@@ -9,6 +9,13 @@
     "NO_UPDATE_NOTIFIER": "1"
   },
   "permissions": {
+    "ask": [
+      "Edit(/.claude/settings.json)",
+      "Edit(/.claude/settings.local.json)",
+      "Edit(/scripts/quality/**)",
+      "Edit(/lefthook.yml)",
+      "Edit(/.github/workflows/**)"
+    ],
     "deny": [
       "Read(~/.ssh/**)",
       "Read(~/.aws/**)",
@@ -30,11 +37,37 @@
       "Read(*.jks)",
       "Read(*.keystore)",
       "Read(*service-account*.json)",
-      "Read(serviceAccountKey*.json)"
+      "Read(serviceAccountKey*.json)",
+      "Read(~/.claude/script-approvals/**)",
+      "Edit(~/.claude/script-approvals/**)"
     ]
   },
   "hooks": {
     "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test ! -f \"${CLAUDE_PROJECT_DIR}/scripts/quality/agent_guard.py\" || python3 \"${CLAUDE_PROJECT_DIR}/scripts/quality/agent_guard.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test ! -f \"${CLAUDE_PROJECT_DIR}/scripts/quality/agent_guard.py\" || python3 \"${CLAUDE_PROJECT_DIR}/scripts/quality/agent_guard.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
       {
         "matcher": "Bash",
         "hooks": [

@@ -27,12 +27,20 @@ For every agent, the lead included, it also guards the machine:
          developer's own browser (open, xdg-open)
   ask    osascript and installs outside the project (npm -g, brew install,
          pipx and so on); both are denied for subagents
+  ask    running project code the user has not approved in its current form:
+         a Python, Node or shell script, a module run with python -m, or a
+         file run by its path, together with the files next to it in the
+         same language, which it can import. The approval is recorded once
+         the command runs (PostToolUse and PostToolUseFailure), per folder and
+         language, in ~/.claude/script-approvals/ outside the repository; the
+         code then runs without the question until one of those files changes
 
 Each deny and ask is appended to logs/agent-guard.log. The guard reads the
 command text, so it is a seatbelt, not a security boundary: branch protection
 and CI on the git host are, and in the strict profile the sandbox.
 
   agent_guard.py                      hook mode: the hook's JSON on stdin
+                                      (PreToolUse, PostToolUse, PostToolUseFailure)
   agent_guard.py --command CMD [--agent NAME] [--root DIR]
                                       print the decision for one command;
                                       exit 0 when allowed, 1 otherwise
@@ -42,6 +50,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import fnmatch
+import hashlib
 import json
 import os
 import re
@@ -51,7 +60,7 @@ import sys
 from pathlib import Path
 from urllib.parse import urlsplit
 
-__all__ = ["main", "decide"]
+__all__ = ["main", "decide", "scripts_run"]
 
 HOOKS = "Git hooks are never skipped (CONTRIBUTING.md): fix what the hook reports instead of bypassing it."
 FORCE = "Plain force pushes are blocked: use --force-with-lease, which refuses to overwrite commits you have not seen."
@@ -98,8 +107,12 @@ SYSTEM_INSTALL = (
     "project dependencies go through the lockfile and the dependency rules (docs/ARCHITECTURE.md)."
 )
 CREDENTIALS = (
-    "Files that hold keys and logins are never read by agents, through any tool "
-    "(the Read deny rules in .claude/settings.json; docs/AGENT-TEAM.md)."
+    "Files that hold keys and logins, and the developer's script approvals, are never read by agents, "
+    "through any tool (the Read deny rules in .claude/settings.json; docs/AGENT-TEAM.md)."
+)
+SCRIPT = (
+    "This runs project code you have not approved in its current form ({files}). "
+    "Check the change (git diff) before allowing; after that it runs without this question until a file changes."
 )
 
 _PROTECTED = {"main", "master"}
@@ -181,6 +194,17 @@ _LOCAL_HOSTS = {"localhost", "::1"}
 _KEYCHAIN = {"find-generic-password", "find-internet-password", "dump-keychain", "export", "unlock-keychain"}
 _URL = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]+:")
 _PATHS = re.compile(r"(?:~|\$\{?HOME\}?)?/[^\s'\"`()<>|;&,]+")
+_PYTHON = re.compile(r"^python(?:\d+(?:\.\d+)*)?$")
+_RUNNERS = {"node", "bun", "deno", "tsx"}  # every project file argument with a script suffix runs
+# Files a script can import, by language, with the label its approval key uses.
+_SCRIPT_FAMILIES = {
+    "*.py": (".py",),
+    "*.{js,ts}": (".js", ".mjs", ".cjs", ".ts", ".mts", ".cts"),
+    "*.sh": (".sh", ".bash", ".zsh"),
+}
+_SUFFIXES = {suffix for family in _SCRIPT_FAMILIES.values() for suffix in family}
+_DEPENDENCY_DIRS = {"node_modules", ".venv", "venv"}  # governed by the lockfile and the dependency rules
+_PENDING_KEPT = 20
 
 
 def decide(command, agent=None, root=None, project=None):
@@ -747,6 +771,196 @@ def _protected(candidate, pattern, root, project):
     return False
 
 
+def scripts_run(command, root=None, project=None):
+    """{approval key: fingerprint} for the project code a shell command runs.
+
+    The key names a folder and language ("scripts/quality/*.py") or, for a file without a script
+    suffix, the file; the fingerprint covers every file the key names.
+    """
+    root = Path(root or ".")
+    try:
+        return _scripts(command, root, Path(project or root), 0)
+    except Exception:  # noqa: BLE001 - an unreadable command gets no script check; Claude Code's own rules still apply
+        return {}
+
+
+def _scripts(text, root, project, depth):
+    if depth > 4:
+        return {}
+    text = _strip_heredocs(text.replace("\\\n", " "))
+    found = {}
+    for inner in _substitutions(text):
+        found.update(_scripts(inner, root, project, depth + 1))
+    here = root
+    for tokens in _segments(text):
+        _env, tokens = _strip_prefix(tokens)
+        if not tokens:
+            continue
+        program, args = os.path.basename(tokens[0]), tokens[1:]
+        if program == "cd":
+            here = Path(_absolute(args[0], here) if args else os.path.expanduser("~"))
+            continue
+        inline = next((i for i, a in enumerate(args) if re.match(r"^-[a-z]*c[a-z]*$", a)), None) if program in _SHELLS else None
+        if inline is not None:
+            if inline + 1 < len(args):
+                found.update(_scripts(args[inline + 1], here, project, depth + 1))
+            continue
+        for path in _script_files(program, tokens[0], args, here):
+            key = _script_key(path, project)
+            if key:
+                found[key] = _fingerprint(path)
+    return found
+
+
+def _script_files(program, first, args, here):
+    """The files a command runs: a Python, Node or shell script, a sourced file, or an executable named by its path."""
+    if _PYTHON.match(program):
+        return _python_script(args, here)
+    if program in _RUNNERS:
+        paths = [_absolute(a, here) for a in args if not a.startswith("-")]
+        return [p for p in paths if os.path.isfile(p) and os.path.splitext(p)[1] in _SUFFIXES]
+    if program in _SHELLS or program in ("source", "."):
+        words, skip = [], False
+        for arg in args:
+            if skip:
+                skip = False
+            elif arg in ("-o", "+o"):
+                skip = True
+            elif not arg.startswith(("-", "+")):
+                words.append(arg)
+        return [_absolute(words[0], here)] if words and "-s" not in args else []
+    return [_absolute(first, here)] if "/" in first else []
+
+
+def _python_script(args, here):
+    """The file python runs: the first argument after its options, or the module after -m; none for -c and stdin."""
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "-":
+            return []
+        if arg.startswith("--"):
+            i += 2 if arg == "--check-hash-based-pycs" else 1
+            continue
+        if arg.startswith("-"):
+            rest = arg[1:]
+            for j, flag in enumerate(rest):
+                if flag in "cmWX":
+                    value = rest[j + 1:]
+                    if not value and i + 1 < len(args):
+                        i += 1
+                        value = args[i]
+                    if flag == "c":
+                        return []
+                    if flag == "m":
+                        return _python_module(value, here)
+                    break
+            i += 1
+            continue
+        return [_absolute(arg, here)]
+    return []
+
+
+def _python_module(name, here):
+    base = os.path.join(str(here), *name.split("."))
+    for candidate in (base + ".py", os.path.join(base, "__main__.py")):
+        if os.path.isfile(candidate):
+            return [candidate]
+    return []
+
+
+def _script_key(path, project):
+    """The approval key for a project file, or None for files outside the project, dependencies and missing files."""
+    base, full = os.path.realpath(project), os.path.realpath(path)
+    if not os.path.isfile(full) or not full.startswith(base + os.sep):
+        return None
+    rel = Path(os.path.relpath(full, base))
+    if _DEPENDENCY_DIRS & set(rel.parts[:-1]):
+        return None
+    label = next((label for label, family in _SCRIPT_FAMILIES.items() if rel.suffix in family), None)
+    if not label:
+        return rel.as_posix()
+    folder = rel.parent.as_posix()
+    return label if folder == "." else f"{folder}/{label}"
+
+
+def _family(suffix):
+    return next((family for family in _SCRIPT_FAMILIES.values() if suffix in family), None)
+
+
+def _fingerprint(path):
+    """SHA-256 of a script and the files next to it in the same language, which it can import."""
+    path = Path(os.path.realpath(path))
+    family = _family(path.suffix)
+    files = {path} | ({p for p in path.parent.iterdir() if p.suffix in family and p.is_file()} if family else set())
+    digest = hashlib.sha256()
+    for file in sorted(files):
+        digest.update(file.name.encode("utf-8") + b"\0" + file.read_bytes() + b"\0")
+    return digest.hexdigest()
+
+
+def _ledger_path(project):
+    """The developer's approvals for one project, kept outside the repository so no commit can pre-approve code."""
+    key = hashlib.sha256(os.path.realpath(project).encode("utf-8")).hexdigest()[:16]
+    return Path(os.path.expanduser("~")) / ".claude" / "script-approvals" / f"{key}.json"
+
+
+def _read_ledger(project):
+    try:
+        data = json.loads(_ledger_path(project).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        data = {}
+    data = data if isinstance(data, dict) else {}
+    approved, pending = data.get("approved"), data.get("pending")
+    return {
+        "project": os.path.realpath(project),
+        "approved": approved if isinstance(approved, dict) else {},
+        "pending": pending if isinstance(pending, dict) else {},
+    }
+
+
+def _write_ledger(project, ledger):
+    path = _ledger_path(project)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+        temp.write_text(json.dumps(ledger, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        os.replace(temp, path)
+    except OSError:
+        pass
+
+
+def _unapproved(command, root, project, tool_use_id=None):
+    """The project code this command runs that is not approved in its current form; with tool_use_id, remembered until it runs."""
+    found = scripts_run(command, root, project)
+    if not found:
+        return {}
+    ledger = _read_ledger(project)
+    changed = {key: value for key, value in found.items() if ledger["approved"].get(key) != value}
+    if changed and tool_use_id:
+        pending = dict(ledger["pending"], **{tool_use_id: changed})
+        ledger["pending"] = dict(list(pending.items())[-_PENDING_KEPT:])
+        _write_ledger(project, ledger)
+    return changed
+
+
+def _script_reason(changed, project):
+    approved = _read_ledger(project)["approved"]
+    files = ", ".join(f"{key}, {'changed' if key in approved else 'new'}" for key in sorted(changed))
+    return SCRIPT.format(files=files)
+
+
+def _approve(project, tool_use_id):
+    """The command ran, so the user approved it: its scripts count as approved in their current form."""
+    if not tool_use_id or not _ledger_path(project).is_file():
+        return
+    ledger = _read_ledger(project)
+    scripts = ledger["pending"].pop(tool_use_id, None)
+    if isinstance(scripts, dict):
+        ledger["approved"].update(scripts)
+        _write_ledger(project, ledger)
+
+
 def _redact(command):
     return _SECRET.sub(lambda m: (m.group(1) or "") + "***" + ("@" if m.group(1) else ""), command)[:500]
 
@@ -775,13 +989,21 @@ def _hook(raw, root_arg=None):
         return 0
     if not isinstance(payload, dict) or payload.get("tool_name") != "Bash":
         return 0
+    root = Path(root_arg or os.environ.get("CLAUDE_PROJECT_DIR") or payload.get("cwd") or ".")
+    if payload.get("hook_event_name") in ("PostToolUse", "PostToolUseFailure"):
+        _approve(root, payload.get("tool_use_id"))
+        return 0
     command = (payload.get("tool_input") or {}).get("command")
     if not isinstance(command, str) or not command.strip():
         return 0
     # Claude Code sends agent_id only for commands a subagent or teammate runs.
     agent = (payload.get("agent_type") or "subagent") if payload.get("agent_id") else None
-    root = Path(root_arg or os.environ.get("CLAUDE_PROJECT_DIR") or payload.get("cwd") or ".")
-    decision, reason = decide(command, agent=agent, root=Path(payload.get("cwd") or root), project=root)
+    cwd = Path(payload.get("cwd") or root)
+    decision, reason = decide(command, agent=agent, root=cwd, project=root)
+    if decision != "deny":
+        changed = _unapproved(command, cwd, root, payload.get("tool_use_id"))
+        if changed:
+            decision, reason = "ask", " ".join(r for r in (reason, _script_reason(changed, root)) if r)
     if decision == "allow":
         return 0
     _log(root, decision, reason, command, agent)
@@ -800,7 +1022,12 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.command is None:
         return _hook(sys.stdin.read(), args.root)
-    decision, reason = decide(args.command, agent=args.agent, root=Path(args.root or ".").resolve())
+    root = Path(args.root or ".").resolve()
+    decision, reason = decide(args.command, agent=args.agent, root=root)
+    if decision != "deny":
+        changed = _unapproved(args.command, root, root)
+        if changed:
+            decision, reason = "ask", " ".join(r for r in (reason, _script_reason(changed, root)) if r)
     print(decision if decision == "allow" else f"{decision}: {reason}")
     return 0 if decision == "allow" else 1
 
